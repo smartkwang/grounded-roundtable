@@ -1,0 +1,90 @@
+{
+  "topic": "AI 안전과 공적 책임",
+  "direction": "tension-first",
+  "sources": [
+    {
+      "source_id": "E01",
+      "speaker": "빌 게이츠",
+      "video_id": "m_CoIITkLkU",
+      "url": "https://youtu.be/m_CoIITkLkU",
+      "channel_name": "BZCF | 비즈까페",
+      "channel_url": "https://www.youtube.com/@B_ZCF",
+      "video_title": "AI 생각 바뀌었다 (빌 게이츠)",
+      "transcript_status": "auto_generated",
+      "anchors": [
+        {
+          "anchor_id": "A01",
+          "start": 1207,
+          "end": 1229,
+          "timestamp_url": "https://youtu.be/m_CoIITkLkU?t=1207",
+          "transcript_span": "you cannot expect an industry to regulate itself",
+          "confidence": "reviewed"
+        }
+      ]
+    },
+    {
+      "source_id": "E02",
+      "speaker": "유발 하라리",
+      "video_id": "LgyyECxOpik",
+      "url": "https://youtu.be/LgyyECxOpik",
+      "channel_name": "BZCF | 비즈까페",
+      "channel_url": "https://www.youtube.com/@B_ZCF",
+      "video_title": "유발하라리 박사님 감사합니다",
+      "transcript_status": "auto_generated",
+      "anchors": [
+        {
+          "anchor_id": "A02",
+          "start": 104,
+          "end": 144,
+          "timestamp_url": "https://youtu.be/LgyyECxOpik?t=104",
+          "transcript_span": "we are still in control in 2026",
+          "confidence": "reviewed"
+        }
+      ]
+    },
+    {
+      "source_id": "E03",
+      "speaker": "일론 머스크",
+      "video_id": "M0N-Hxgqi7I",
+      "url": "https://youtu.be/M0N-Hxgqi7I",
+      "channel_name": "BZCF | 비즈까페",
+      "channel_url": "https://www.youtube.com/@B_ZCF",
+      "video_title": "일론머스크: 인간 이제 5년 남았다",
+      "transcript_status": "auto_generated",
+      "anchors": [
+        {
+          "anchor_id": "A03",
+          "start": 312,
+          "end": 330,
+          "timestamp_url": "https://youtu.be/M0N-Hxgqi7I?t=312",
+          "transcript_span": "I think it is unlikely",
+          "confidence": "reviewed"
+        }
+      ]
+    }
+  ],
+  "claims": [
+    {
+      "claim_id": "C01",
+      "speaker": "빌 게이츠",
+      "label": "faithful_paraphrase",
+      "text": "산업의 자율규제만으로는 부족하므로 외부 중재가 필요하다.",
+      "support_anchor_ids": ["A01"]
+    },
+    {
+      "claim_id": "C02",
+      "speaker": "유발 하라리",
+      "label": "faithful_paraphrase",
+      "text": "통제 상실은 불가피하지 않으며 2026년의 선택이 중요하다.",
+      "support_anchor_ids": ["A02"]
+    },
+    {
+      "claim_id": "C03",
+      "speaker": "일론 머스크",
+      "label": "faithful_paraphrase",
+      "text": "지능 격차가 커지면 인간의 직접 통제는 어려울 수 있다.",
+      "support_anchor_ids": ["A03"]
+    }
+  ]
+}
+

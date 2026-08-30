@@ -1,0 +1,121 @@
+#!/usr/bin/env node
+import fs from 'node:fs';
+
+const file = process.argv[2];
+if (!file) {
+  console.error('Usage: node validate_manifest.mjs <manifest.json>');
+  process.exit(2);
+}
+
+let data;
+try {
+  data = JSON.parse(fs.readFileSync(file, 'utf8'));
+} catch (error) {
+  console.error(`Cannot read JSON manifest: ${error.message}`);
+  process.exit(2);
+}
+
+const errors = [];
+const sources = Array.isArray(data.sources) ? data.sources : [];
+if (sources.length < 2) errors.push('sources must contain at least two entries');
+
+const anchors = new Map();
+const videoId = (url) => {
+  const match = String(url || '').match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|shorts\/|embed\/))([A-Za-z0-9_-]{6,})/);
+  return match?.[1] || null;
+};
+
+for (const [index, source] of sources.entries()) {
+  const sourceLabel = `sources[${index}]`;
+  if (!source.video_id) errors.push(`${sourceLabel}.video_id is required`);
+  if (!source.speaker) errors.push(`${sourceLabel}.speaker is required`);
+  if (!videoId(source.url) || videoId(source.url) !== source.video_id) {
+    errors.push(`${sourceLabel}.url does not contain the declared video_id`);
+  }
+  for (const [anchorIndex, anchor] of (source.anchors || []).entries()) {
+    const label = `${sourceLabel}.anchors[${anchorIndex}]`;
+    if (!anchor.anchor_id) errors.push(`${label}.anchor_id is required`);
+    if (!Number.isFinite(anchor.start) || !Number.isFinite(anchor.end) || anchor.start < 0 || anchor.end <= anchor.start) {
+      errors.push(`${label} must have finite start/end seconds with end > start`);
+    }
+    const parsed = videoId(anchor.timestamp_url);
+    const t = String(anchor.timestamp_url || '').match(/[?&]t=(\d+)/)?.[1];
+    if (parsed !== source.video_id || Number(t) !== anchor.start) {
+      errors.push(`${label}.timestamp_url must match video_id and start`);
+    }
+    if (anchor.anchor_id) {
+      if (anchors.has(anchor.anchor_id)) errors.push(`${label}.anchor_id duplicates ${anchor.anchor_id}; anchor IDs must be globally unique`);
+      else anchors.set(anchor.anchor_id, { source, anchor });
+    }
+  }
+}
+
+for (const [index, claim] of (Array.isArray(data.claims) ? data.claims : []).entries()) {
+  const label = `claims[${index}]`;
+  if (!claim.speaker || !claim.text) errors.push(`${label} needs speaker and text`);
+  const ids = Array.isArray(claim.support_anchor_ids) ? claim.support_anchor_ids : [];
+  if (claim.speaker !== 'moderator' && ids.length === 0) errors.push(`${label} needs support_anchor_ids`);
+  for (const id of ids) if (!anchors.has(id)) errors.push(`${label} references unknown anchor ${id}`);
+  if (claim.label === 'direct_quote' && !claim.transcript_span) errors.push(`${label} direct_quote needs transcript_span`);
+}
+
+// A manifest can optionally describe where each evidence anchor is rendered.
+// This is the boundary that prevents a planner from showing the same clip
+// twice, or from creating multiple players for one evidence slot.
+const evidenceUses = Array.isArray(data.evidence_uses) ? data.evidence_uses : [];
+const usedAnchors = new Map();
+const usedClips = new Map();
+const usedSlides = new Set();
+for (const [index, use] of evidenceUses.entries()) {
+  const label = `evidence_uses[${index}]`;
+  if (!use || typeof use !== 'object') {
+    errors.push(`${label} must be an object`);
+    continue;
+  }
+  for (const field of ['slide_id', 'anchor_id', 'video_id']) {
+    if (!use[field]) errors.push(`${label}.${field} is required`);
+  }
+  if (use.slide_id) {
+    if (usedSlides.has(use.slide_id)) errors.push(`${label} reuses slide_id ${use.slide_id}; each evidence slide gets one player`);
+    usedSlides.add(use.slide_id);
+  }
+  const anchor = use.anchor_id ? anchors.get(use.anchor_id) : null;
+  if (use.anchor_id && !anchor) errors.push(`${label} references unknown anchor ${use.anchor_id}`);
+  if (!Number.isFinite(use.start) || !Number.isFinite(use.end) || use.start < 0 || use.end <= use.start) {
+    errors.push(`${label} must have finite start/end seconds with end > start`);
+  }
+  if (anchor) {
+    if (use.video_id !== anchor.source.video_id) errors.push(`${label}.video_id must match anchor ${use.anchor_id}`);
+    if (use.start !== anchor.anchor.start || use.end !== anchor.anchor.end) {
+      errors.push(`${label} range must match anchor ${use.anchor_id}`);
+    }
+  }
+  const reuseAllowed = use.reuse_allowed === true;
+  if (reuseAllowed && !String(use.reuse_reason || '').trim()) {
+    errors.push(`${label}.reuse_reason is required when reuse_allowed is true`);
+  }
+  if (use.anchor_id) {
+    const previous = usedAnchors.get(use.anchor_id);
+    if (previous && !reuseAllowed) {
+      errors.push(`${label} repeats anchor ${use.anchor_id}; show one evidence player and cross-reference the existing slide instead`);
+    }
+    usedAnchors.set(use.anchor_id, label);
+  }
+  if (use.video_id && Number.isFinite(use.start) && Number.isFinite(use.end)) {
+    const clipKey = `${use.video_id}:${use.start}:${use.end}`;
+    const previous = usedClips.get(clipKey);
+    if (previous && !reuseAllowed) {
+      errors.push(`${label} repeats clip ${clipKey}; duplicate players are not allowed`);
+    }
+    usedClips.set(clipKey, label);
+  }
+}
+
+if (errors.length) {
+  console.error(`Manifest invalid (${errors.length} issue${errors.length === 1 ? '' : 's'}):`);
+  for (const error of errors) console.error(`- ${error}`);
+  process.exit(1);
+}
+
+console.log(`Manifest valid: ${sources.length} sources, ${anchors.size} anchors, ${(data.claims || []).length} claims.`);
+
