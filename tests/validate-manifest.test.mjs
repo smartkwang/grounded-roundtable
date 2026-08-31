@@ -424,6 +424,18 @@ try {
     moderator_question: '목표가 먼저인가요, 집중이 먼저인가요?'
   }), /uses forced-choice marker "paired ~인가요" for non-conflict relationship sequence/);
 
+  expectInvalid('particle-form-forced-choice', connectionManifest({
+    moderator_question: '목표와 집중 중에 무엇을 먼저 정할까요?'
+  }), /uses forced-choice marker "중 무엇" for non-conflict relationship sequence/);
+
+  expectInvalid('question-ending-either-side', connectionManifest({
+    moderator_question: '두 기준 가운데 어느 쪽인가요?'
+  }), /uses forced-choice marker "어느 쪽" for non-conflict relationship sequence/);
+
+  expectValid('not-an-alternative-substring', connectionManifest({
+    moderator_question: '두 기준은 서로 대안이 아니면서 어떻게 함께 작동할까요?'
+  }));
+
   expectInvalid('choice-use-of-either-side', connectionManifest({
     moderator_question: '어느 쪽이 더 중요한가요?'
   }), /uses forced-choice marker "어느 쪽" for non-conflict relationship sequence/);
@@ -495,6 +507,23 @@ try {
     ))
   }, /moderator claim M01 text must match connection SC01 moderator_question/);
 
+  const literalModeratorQuestion = connectionManifest();
+  literalModeratorQuestion.sources[0].anchors.push({
+    anchor_id: 'A03',
+    rhetorical_form: 'literal',
+    start: 70,
+    end: 90,
+    timestamp_url: 'https://youtu.be/chef001?t=70'
+  });
+  literalModeratorQuestion.claims.push({
+    claim_id: 'M02',
+    speaker: 'moderator',
+    label: 'moderator_question',
+    text: '이 원칙을 실제 업무에 어떻게 적용할까요?',
+    support_anchor_ids: ['A03']
+  });
+  expectValid('literal-moderator-question-needs-no-semantic-connection', literalModeratorQuestion);
+
   const publicExample = spawnSync(process.execPath, [
     validator,
     fileURLToPath(new URL('../examples/manifest.json', import.meta.url))
@@ -505,7 +534,7 @@ try {
     `public example should pass:\n${publicExample.stderr}`
   );
 
-  console.log('Manifest validator tests passed: 51 cases.');
+  console.log('Manifest validator tests passed: 55 cases.');
 } finally {
   fs.rmSync(tempDir, { recursive: true, force: true });
 }

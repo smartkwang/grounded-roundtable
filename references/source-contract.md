@@ -118,7 +118,7 @@ Claims backed by a metaphorical or mixed anchor must set `layer` and list the co
 
 Literal-only claims may omit `layer`; the validator treats that simple case as dialogue. A frame reference must exist and its anchor must appear in the claim's `support_anchor_ids`.
 
-When a moderator question also appears in `claims`, set `semantic_connection_id` and use exactly the same text as the referenced `moderator_question`. A second free-standing moderator question would bypass relationship validation and is rejected.
+When a moderator question connects two or more semantic frames and also appears in `claims`, set `semantic_connection_id` and use exactly the same text as the referenced `moderator_question`. A question with no support anchors also requires the link when multiple frames exist, preventing an unvalidated question from bypassing the relationship contract. A question supported exclusively by literal anchors needs no semantic connection.
 
 Every `semantic_connections` entry cites at least two distinct frames from different YouTube videos. Relationship and question mode must agree:
 
@@ -128,7 +128,7 @@ Every `semantic_connections` entry cites at least two distinct frames from diffe
 | `complement` | `integration`, `sequence` |
 | `conflict` | `contrast`, `tradeoff`, `integration` |
 
-The validator scans moderator questions for all referenced source-image terms and scans cross-domain `bridges[].text` against frames attached to their support anchors. For `sequence` and `complement`, it rejects `아니면`, `중 무엇`, choice uses of `어느 쪽`, and paired `~인가요` questions. Neutral wording such as `어느 쪽에도 치우치지 않으려면` remains valid. Explicit alternatives are permitted when the verified relationship is `conflict`.
+The validator scans moderator questions for their support-anchor or connection frames and scans cross-domain `bridges[].text` against frames attached to their support anchors. For `sequence` and `complement`, it rejects token-bounded `아니면`, `중 무엇`/`중에 무엇`, choice uses such as `어느 쪽인가요`, and paired `~인가요` questions. Neutral wording such as `어느 쪽에도 치우치지 않으려면` or `대안이 아니면서` remains valid. Explicit alternatives are permitted when the verified relationship is `conflict`.
 
 `evidence_uses` is the render plan. It is optional for an evidence-map-only draft, but required before rendering a deck. Each evidence anchor normally appears in exactly one evidence slide, and each exact `video_id + start + end` clip is rendered once. If a deliberate reuse is unavoidable, set `reuse_allowed: true` and provide a short `reuse_reason`; otherwise `scripts/validate_manifest.mjs` rejects the manifest.
 

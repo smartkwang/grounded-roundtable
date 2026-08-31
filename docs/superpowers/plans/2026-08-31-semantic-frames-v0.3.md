@@ -274,7 +274,7 @@ const allowedQuestionModes = {
 const forcedChoiceMarkers = ['아니면', '중 무엇'];
 ```
 
-For every connection, require a unique non-empty `connection_id`, non-empty `shared_dimension` and `moderator_question`, a known relationship, a compatible question mode, and at least two distinct known frames from different YouTube video IDs. Scan the moderator question against the union of referenced frame terms. For `sequence` and `complement`, reject explicit `아니면`/`중 무엇`, choice uses of `어느 쪽`, and paired `~인가요`; do not reject neutral `어느 쪽에도` wording and do not apply the heuristic to `conflict`. A moderator question duplicated in `claims` must provide `semantic_connection_id` and exactly match the connection question. Scan cross-domain bridge text against frames belonging to its support anchors.
+For every connection, require a unique non-empty `connection_id`, non-empty `shared_dimension` and `moderator_question`, a known relationship, a compatible question mode, and at least two distinct known frames from different YouTube video IDs. Scan the moderator question against the union of referenced frame terms. For `sequence` and `complement`, use token boundaries to reject explicit `아니면`, `중 무엇`/`중에 무엇`, choice uses such as `어느 쪽인가요`, and paired `~인가요`; do not reject neutral `어느 쪽에도` or `아니면서` wording and do not apply the heuristic to `conflict`. A moderator question duplicated in `claims` must provide `semantic_connection_id` and exactly match the connection question when its support anchors resolve to at least two frames, or when it omits support anchors while multiple frames exist. Literal-only questions need no connection. Scan cross-domain bridge text against frames belonging to its support anchors.
 
 - [ ] **Step 4: Run focused and full tests**
 

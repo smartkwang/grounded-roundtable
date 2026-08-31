@@ -42,7 +42,6 @@ const allowedQuestionModes = {
   complement: new Set(['integration', 'sequence']),
   conflict: new Set(['contrast', 'tradeoff', 'integration'])
 };
-const forcedChoiceMarkers = ['아니면', '중 무엇'];
 
 function rawTokens(text) {
   const normalized = String(text || '')
@@ -79,12 +78,14 @@ function findLeakedTerm(text, terms) {
 
 function findForcedChoiceMarker(text) {
   const tokens = rawTokens(text);
-  const normalized = tokens.join(' ');
-  for (const marker of forcedChoiceMarkers) {
-    if (normalized.includes(marker)) return marker;
-  }
+  if (tokens.includes('아니면')) return '아니면';
   for (let index = 0; index < tokens.length - 1; index += 1) {
-    if (tokens[index] === '어느' && ['쪽이', '쪽을', '쪽부터', '쪽인가', '쪽일까'].includes(tokens[index + 1])) {
+    if (['중', '중에', '중에서'].includes(tokens[index]) && tokens[index + 1].startsWith('무엇')) {
+      return '중 무엇';
+    }
+    if (tokens[index] === '어느' && [
+      '쪽이', '쪽을', '쪽부터', '쪽인가', '쪽인가요', '쪽일까', '쪽일까요'
+    ].includes(tokens[index + 1])) {
       return '어느 쪽';
     }
   }
@@ -331,7 +332,22 @@ for (const [index, connection] of (Array.isArray(data.semantic_connections) ? da
 for (const [index, claim] of claims.entries()) {
   if (claim?.speaker !== 'moderator') continue;
   const claimName = claim.claim_id || `claims[${index}]`;
-  for (const [frameId, framed] of semanticFrames) {
+  const supportAnchorIds = Array.isArray(claim.support_anchor_ids) ? claim.support_anchor_ids : [];
+  const supportedFrames = [...semanticFrames].filter(([, framed]) => (
+    supportAnchorIds.includes(framed.frame.anchor_id)
+  ));
+  const connection = claim.semantic_connection_id
+    ? semanticConnections.get(claim.semantic_connection_id)
+    : null;
+  const connectedFrameIds = new Set(
+    Array.isArray(connection?.semantic_frame_ids) ? connection.semantic_frame_ids : []
+  );
+  const framesToScan = supportAnchorIds.length > 0
+    ? supportedFrames
+    : connection
+      ? [...semanticFrames].filter(([frameId]) => connectedFrameIds.has(frameId))
+      : [...semanticFrames];
+  for (const [frameId, framed] of framesToScan) {
     const leakedTerm = findLeakedTerm(claim.text, framed.frame.source_image_terms || []);
     if (leakedTerm) {
       errors.push(`moderator claim ${claimName} leaks source-image term "${leakedTerm}" from frame ${frameId}`);
@@ -342,12 +358,15 @@ for (const [index, claim] of claims.entries()) {
   const isQuestion = claim.label === 'moderator_question'
     || /[?？]\s*$/.test(claimText)
     || /(?:까요|나요|인가요)\s*$/.test(claimText);
-  if (semanticFrames.size >= 2 && isQuestion && !claim.semantic_connection_id) {
+  const needsConnection = isQuestion && (
+    supportedFrames.length >= 2
+    || (supportAnchorIds.length === 0 && semanticFrames.size >= 2)
+  );
+  if (needsConnection && !claim.semantic_connection_id) {
     errors.push(`moderator claim ${claimName} requires semantic_connection_id`);
     continue;
   }
   if (!claim.semantic_connection_id) continue;
-  const connection = semanticConnections.get(claim.semantic_connection_id);
   if (!connection) {
     errors.push(`moderator claim ${claimName} references unknown semantic connection ${claim.semantic_connection_id}`);
     continue;

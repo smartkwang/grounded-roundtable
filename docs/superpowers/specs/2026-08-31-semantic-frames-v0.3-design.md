@@ -77,7 +77,7 @@ Claims supported by a metaphorical or mixed anchor add:
 
 A claim supported by a metaphorical or mixed anchor must list its semantic frame ID. Unknown or unrelated frame references fail validation.
 
-A moderator question represented in `claims` must set `semantic_connection_id`, and its text must exactly match that connection's `moderator_question`. This prevents a second, unvalidated moderator question from bypassing the connection contract. Non-question transitions remain ordinary AI-moderator text but are still scanned for image leakage.
+A moderator question represented in `claims` must set `semantic_connection_id` when its support anchors resolve to at least two semantic frames, or when it has no support anchors while the manifest contains multiple frames. Its text must exactly match that connection's `moderator_question`. Questions supported exclusively by literal anchors need no semantic connection. Non-question transitions remain ordinary AI-moderator text but are still scanned for relevant image leakage.
 
 ### Semantic connections
 
@@ -106,7 +106,7 @@ Relationships and allowed question modes are:
 | `complement` | `integration`, `sequence` |
 | `conflict` | `contrast`, `tradeoff`, `integration` |
 
-Every connection cites at least two frames from different YouTube video IDs. The moderator question is scanned for source-image leakage. For `sequence` and `complement`, a narrow Korean heuristic rejects explicit alternatives such as `아니면`, `중 무엇`, choice uses of `어느 쪽`, and paired `~인가요` questions. Neutral phrases such as `어느 쪽에도 치우치지 않으려면` remain valid.
+Every connection cites at least two frames from different YouTube video IDs. The moderator question is scanned for source-image leakage. For `sequence` and `complement`, a narrow token-aware Korean heuristic rejects explicit alternatives such as `아니면`, `중에 무엇`, choice uses such as `어느 쪽인가요`, and paired `~인가요` questions. Neutral phrases such as `어느 쪽에도 치우치지 않으려면` and `대안이 아니면서` remain valid.
 
 `connection_id` must be unique. `shared_dimension` and `moderator_question` must be non-empty after trimming whitespace. Repeated frame IDs within one connection do not count toward the two-frame minimum.
 
