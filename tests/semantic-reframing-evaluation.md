@@ -34,5 +34,11 @@ Expected concepts: setting direction; concentrating effort by removing lower pri
 | relationship-aware prompt candidate | A | 5 | 2 | Three participant turns still retained `산` or `짐`; prose guidance alone did not bind the layer. |
 | two-layer prompt candidate | A | 5 | 5 | Moderator and participant turns used goal, direction, focus, choices, and workload. |
 | two-layer prompt candidate | B | 2 | 1 | One participant turn still used `가지치기하듯`, exposing the prompt-only architecture limit. |
-| v0.3.0 semantic-frame candidate | A | — | pending | Run five fresh contexts after the validator-backed installed candidate is synchronized. |
-| v0.3.0 semantic-frame candidate | B | — | pending | Run two fresh contexts after the validator-backed installed candidate is synchronized. |
+| v0.3.0 pre-fix candidate | A | 3 | 2 | One moderator used `덜어내야`; this exposed a two-syllable inflected-verb gap and produced the regression test in commit `66c5d9e`. |
+| v0.3.0 semantic-frame candidate (`66c5d9e`) | A | 5 | 5 | All turns used goals, direction, priorities, or work selection; no mountain/luggage image term or forced choice remained. |
+| v0.3.0 semantic-frame candidate (`66c5d9e`) | B | 2 | 2 | All turns used direction and prioritization; no navigation/gardening image term or fabricated interaction remained. |
+| v0.3.0 pre-final-validation candidate (`b7b455a`) | A | 5 | 4 | One participant still used `덜어내야`; short dialogue requests were not consistently validating the exact final wording. |
+| v0.3.0 final-manifest candidate (`885487e`) | A | 5 | 5 | All final turns stayed at goal, direction, prioritization, exclusion, or focus concepts. |
+| v0.3.0 final-manifest candidate (`885487e`) | B | 2 | 2 | All final turns stayed at direction and resource-prioritization concepts without navigation or gardening imagery. |
+
+Every output was read manually. Each final pass count uses fresh contexts created after that exact runtime candidate was synchronized; earlier runs are not carried forward.
