@@ -49,7 +49,7 @@ Every `metaphorical` or `mixed` anchor must have exactly one semantic frame. A `
     {
       "frame_id": "F01",
       "anchor_id": "A01",
-      "source_image_terms": ["산", "오를", "걷다"],
+      "source_image_terms": ["산", "오를", "걷고", "걸어"],
       "underlying_claim": "목표와 방향을 먼저 정해야 한다.",
       "visual_hint": "선택한 봉우리를 바라보는 장면"
     }
@@ -57,7 +57,7 @@ Every `metaphorical` or `mixed` anchor must have exactly one semantic frame. A `
 }
 ```
 
-`source_image_terms` contains only words that belong to the metaphorical image, not legitimate concept words such as `목표`, `방향`, or `우선순위`. `visual_hint` is optional and never becomes evidence by itself.
+`source_image_terms` is a non-empty array of non-empty strings containing only words that belong to the metaphorical image, not legitimate concept words such as `목표`, `방향`, or `우선순위`. Include stable surface variants for irregular Korean image verbs when needed (`걷고`, `걸어`); the validator deliberately does not attempt universal morphology. `underlying_claim` is a non-empty string. `visual_hint` is optional and never becomes evidence by itself.
 
 ### Dialogue claims
 
@@ -72,10 +72,12 @@ Claims supported by a metaphorical or mixed anchor add:
 
 `layer` is `dialogue` or `evidence`. It defaults to `dialogue` only for claims supported exclusively by literal anchors, preserving the simplest existing case.
 
-- `dialogue` contains moderator wording and participant `faithful_paraphrase` or `multi_anchor_synthesis` text. It must contain no source-image term from its linked frames.
+- `dialogue` contains moderator wording, cross-domain bridge text, and participant `faithful_paraphrase` or `multi_anchor_synthesis` text. It must contain no source-image term from its linked or support-anchor frames.
 - `evidence` may preserve verified source wording. A metaphorical `direct_quote` is valid only in this layer and continues to require transcript text plus original-audio review.
 
 A claim supported by a metaphorical or mixed anchor must list its semantic frame ID. Unknown or unrelated frame references fail validation.
+
+A moderator question represented in `claims` must set `semantic_connection_id`, and its text must exactly match that connection's `moderator_question`. This prevents a second, unvalidated moderator question from bypassing the connection contract. Non-question transitions remain ordinary AI-moderator text but are still scanned for image leakage.
 
 ### Semantic connections
 
@@ -90,7 +92,7 @@ When a moderator connects two or more semantic frames, the manifest records the 
       "relationship": "sequence",
       "shared_dimension": "목표 설정과 집중",
       "question_mode": "sequence",
-      "moderator_question": "목표를 먼저 분명히 한 뒤, 불필요한 선택을 어떻게 덜어내야 할까요?"
+      "moderator_question": "목표를 먼저 분명히 한 뒤, 무엇을 하지 않을지 어떻게 정할까요?"
     }
   ]
 }
@@ -104,7 +106,7 @@ Relationships and allowed question modes are:
 | `complement` | `integration`, `sequence` |
 | `conflict` | `contrast`, `tradeoff`, `integration` |
 
-Every connection cites at least two frames from different sources. The moderator question is scanned for source-image leakage. For `sequence` and `complement`, a narrow Korean heuristic also rejects unsupported forced-choice forms such as `아니면`, `중 무엇`, and `어느 쪽`.
+Every connection cites at least two frames from different YouTube video IDs. The moderator question is scanned for source-image leakage. For `sequence` and `complement`, a narrow Korean heuristic rejects explicit alternatives such as `아니면`, `중 무엇`, choice uses of `어느 쪽`, and paired `~인가요` questions. Neutral phrases such as `어느 쪽에도 치우치지 않으려면` remain valid.
 
 `connection_id` must be unique. `shared_dimension` and `moderator_question` must be non-empty after trimming whitespace. Repeated frame IDs within one connection do not count toward the two-frame minimum.
 
@@ -115,7 +117,7 @@ The validator normalizes Unicode with NFKC, lowercases Latin text, replaces punc
 - One-character terms match normalized tokens exactly, which catches `산을` and `짐부터` without matching `생산` or `계산`.
 - Terms of two or more characters match a normalized token prefix, which catches `가지치기하듯` from `가지치기` and `덜어내야` from the stable surface fragment `덜어`.
 
-The validator reports the claim or connection ID, matched term, and frame ID. It does not rewrite text automatically. The workflow rewrites only the affected turn once, validates again, and stops with the remaining violations if the second attempt fails.
+The validator reports the claim, connection, or bridge ID, matched term, and frame ID. It does not rewrite text automatically. The workflow rewrites only the affected turn once, validates again, and stops with the remaining violations if the second attempt fails.
 
 ## Workflow changes
 
@@ -151,11 +153,13 @@ Unit tests must cover:
 - missing or invalid `rhetorical_form`;
 - a metaphorical anchor with no frame or more than one frame;
 - a frame with an unknown anchor or empty image terms;
-- participant and moderator dialogue leaking short and long source-image terms;
+- participant, moderator, and cross-domain bridge dialogue leaking short and long source-image terms;
 - a verified evidence-layer direct quote retaining source wording;
 - unknown or unrelated frame references;
 - incompatible relationship and question modes;
 - a non-conflict connection using a forced-choice marker;
+- a moderator question missing or disagreeing with its `semantic_connection_id`;
+- duplicate source/video identities and malformed semantic-frame field types;
 - the existing bridge and evidence-player invariants.
 
 Behavior evaluation uses fresh contexts and scores semantic invariants rather than exact wording. Before release, Case A runs five times and Case B runs at least twice. All dialogue-layer turns must pass; evidence-layer imagery may remain.

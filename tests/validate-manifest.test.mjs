@@ -203,6 +203,21 @@ function expectInvalid(name, manifest, message) {
 try {
   expectValid('valid-cross-domain-bridge', base);
 
+  expectInvalid('missing-source-id', {
+    ...base,
+    sources: [{ ...base.sources[0], source_id: undefined }, base.sources[1]]
+  }, /source_id is required/);
+
+  const duplicateVideoSource = structuredClone(base);
+  duplicateVideoSource.sources[1].video_id = 'chef001';
+  duplicateVideoSource.sources[1].url = 'https://youtu.be/chef001';
+  duplicateVideoSource.sources[1].anchors[0].timestamp_url = 'https://youtu.be/chef001?t=40';
+  expectInvalid(
+    'duplicate-video-source',
+    duplicateVideoSource,
+    /video_id duplicates chef001; each source must be a different YouTube video/
+  );
+
   expectInvalid('participant-attribution', {
     ...base,
     bridges: [{ ...base.bridges[0], author: 'Chef A' }]
@@ -232,6 +247,10 @@ try {
     rhetorical_form: undefined
   }), /rhetorical_form must be literal, metaphorical, or mixed/);
 
+  expectInvalid('invalid-rhetorical-form', manifestWithAnchor('A01', {
+    rhetorical_form: 'figurative'
+  }), /rhetorical_form must be literal, metaphorical, or mixed/);
+
   expectInvalid('metaphorical-anchor-without-frame', manifestWithAnchor('A01', {
     rhetorical_form: 'metaphorical'
   }), /metaphorical anchor A01 must have exactly one semantic frame/);
@@ -248,6 +267,20 @@ try {
     ]
   }), /frame_id duplicates F01/);
 
+  expectInvalid('duplicate-frame-id-after-invalid-owner', metaphorManifest({
+    semantic_frames: [
+      frame('F01', 'A99', ['산'], '목표를 먼저 정해야 한다.'),
+      frame('F01', 'A01', ['산'], '목표를 먼저 정해야 한다.')
+    ]
+  }), /frame_id duplicates F01/);
+
+  expectInvalid('metaphorical-anchor-with-two-frames', metaphorManifest({
+    semantic_frames: [
+      frame('F01', 'A01', ['산'], '목표를 먼저 정해야 한다.'),
+      frame('F02', 'A01', ['걸어'], '방향 없는 속도는 성과로 이어지기 어렵다.')
+    ]
+  }), /metaphorical anchor A01 must have exactly one semantic frame/);
+
   expectInvalid('unknown-frame-anchor', {
     ...base,
     semantic_frames: [frame('F01', 'A99', ['산'], '목표를 먼저 정해야 한다.')]
@@ -256,6 +289,21 @@ try {
   expectInvalid('empty-image-terms', metaphorManifest({
     semantic_frames: [frame('F01', 'A01', [], '목표를 먼저 정해야 한다.')]
   }), /source_image_terms must contain at least one non-empty term/);
+
+  expectInvalid('invalid-image-term-type', metaphorManifest({
+    semantic_frames: [frame('F01', 'A01', ['산', 123, ''], '목표를 먼저 정해야 한다.')]
+  }), /source_image_terms must contain only non-empty strings/);
+
+  expectInvalid('invalid-frame-id-type', metaphorManifest({
+    semantic_frames: [{
+      ...frame('F01', 'A01', ['산'], '목표를 먼저 정해야 한다.'),
+      frame_id: 101
+    }]
+  }), /frame_id must be a non-empty string/);
+
+  expectInvalid('invalid-underlying-claim-type', metaphorManifest({
+    semantic_frames: [frame('F01', 'A01', ['산'], { text: '목표를 먼저 정해야 한다.' })]
+  }), /underlying_claim must be a non-empty string/);
 
   expectValid('valid-metaphor-dialogue-claim', metaphorBase());
 
@@ -328,6 +376,19 @@ try {
     /claim C01 leaks source-image term "오를" from frame F01/
   );
 
+  const irregularSurfaceVariant = metaphorBase();
+  irregularSurfaceVariant.semantic_frames[0] = frame(
+    'F01',
+    'A01',
+    ['걷다', '걸어'],
+    '목표와 방향을 먼저 정해야 한다.'
+  );
+  expectInvalid(
+    'irregular-surface-variant-leak',
+    withClaimChanges(irregularSurfaceVariant, { text: '어디로 걸어갈지 먼저 정해야 합니다.' }),
+    /claim C01 leaks source-image term "걸어" from frame F01/
+  );
+
   expectValid('evidence-direct-quote-keeps-metaphor', evidenceQuoteManifest());
 
   expectValid('valid-sequence-connection', connectionManifest());
@@ -359,6 +420,20 @@ try {
     moderator_question: '목표가 중요한가, 아니면 소거가 중요한가?'
   }), /uses forced-choice marker "아니면" for non-conflict relationship complement/);
 
+  expectInvalid('paired-question-forced-choice', connectionManifest({
+    moderator_question: '목표가 먼저인가요, 집중이 먼저인가요?'
+  }), /uses forced-choice marker "paired ~인가요" for non-conflict relationship sequence/);
+
+  expectInvalid('choice-use-of-either-side', connectionManifest({
+    moderator_question: '어느 쪽이 더 중요한가요?'
+  }), /uses forced-choice marker "어느 쪽" for non-conflict relationship sequence/);
+
+  expectValid('non-choice-either-side-phrase', connectionManifest({
+    relationship: 'complement',
+    question_mode: 'integration',
+    moderator_question: '어느 쪽에도 치우치지 않으려면 어떻게 해야 할까요?'
+  }));
+
   expectInvalid('empty-shared-dimension', connectionManifest({
     shared_dimension: ' '
   }), /shared_dimension is required/);
@@ -381,6 +456,45 @@ try {
     moderator_question: '어느 쪽의 위험을 먼저 감수해야 할까요?'
   }));
 
+  const bridgeLeak = connectionManifest();
+  bridgeLeak.bridges[0].text = '한쪽은 산을 정하고 다른 쪽은 짐을 줄인다는 원리로 연결된다.';
+  expectInvalid(
+    'cross-domain-bridge-metaphor-leak',
+    bridgeLeak,
+    /bridge B01 leaks source-image term "산" from frame F01/
+  );
+
+  const moderatorBypass = connectionManifest();
+  moderatorBypass.semantic_connections = [];
+  moderatorBypass.claims.push({
+    claim_id: 'M01',
+    speaker: 'moderator',
+    label: 'moderator_question',
+    text: '목표가 먼저인가요, 집중이 먼저인가요?'
+  });
+  expectInvalid(
+    'moderator-question-requires-connection',
+    moderatorBypass,
+    /moderator claim M01 requires semantic_connection_id/
+  );
+
+  const linkedModerator = connectionManifest();
+  linkedModerator.claims.push({
+    claim_id: 'M01',
+    speaker: 'moderator',
+    label: 'moderator_question',
+    text: linkedModerator.semantic_connections[0].moderator_question,
+    semantic_connection_id: 'SC01'
+  });
+  expectValid('moderator-question-linked-to-connection', linkedModerator);
+
+  expectInvalid('moderator-question-must-match-connection', {
+    ...linkedModerator,
+    claims: linkedModerator.claims.map((claim) => (
+      claim.claim_id === 'M01' ? { ...claim, text: '다른 질문입니까?' } : claim
+    ))
+  }, /moderator claim M01 text must match connection SC01 moderator_question/);
+
   const publicExample = spawnSync(process.execPath, [
     validator,
     fileURLToPath(new URL('../examples/manifest.json', import.meta.url))
@@ -391,7 +505,7 @@ try {
     `public example should pass:\n${publicExample.stderr}`
   );
 
-  console.log('Manifest validator tests passed: 34 cases.');
+  console.log('Manifest validator tests passed: 51 cases.');
 } finally {
   fs.rmSync(tempDir, { recursive: true, force: true });
 }

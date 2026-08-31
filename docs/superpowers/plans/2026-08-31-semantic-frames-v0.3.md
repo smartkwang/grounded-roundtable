@@ -29,7 +29,7 @@
 
 **Interfaces:**
 - Consumes: existing `sources[].anchors[]` map keyed by `anchor_id`.
-- Produces: `semanticFrames: Map<string, { frame, anchor, source }>` keyed by `frame_id`, plus validator errors for invalid `rhetorical_form` and frame ownership.
+- Produces: `semanticFrames: Map<string, { frame, anchor, source }>` keyed by `frame_id`, a global `semanticFrameIds: Set<string>` for duplicate detection before owner resolution, and validator errors for invalid `rhetorical_form` and frame ownership.
 
 - [ ] **Step 1: Make the existing fixture explicitly literal**
 
@@ -86,9 +86,10 @@ In `scripts/validate_manifest.mjs`:
 const rhetoricalForms = new Set(['literal', 'metaphorical', 'mixed']);
 const anchorFrameCounts = new Map();
 const semanticFrames = new Map();
+const semanticFrameIds = new Set();
 ```
 
-During anchor parsing, reject values outside `rhetoricalForms`. Parse `data.semantic_frames` after anchors. Require a unique non-empty `frame_id`, an existing `anchor_id`, a non-empty trimmed `underlying_claim`, and at least one non-empty trimmed string in `source_image_terms`. Store valid references in `semanticFrames` and increment `anchorFrameCounts`. Then require exactly one frame for `metaphorical`/`mixed` anchors and zero frames for `literal` anchors.
+During source parsing, require unique non-empty `source_id` and unique YouTube `video_id`. During anchor parsing, reject values outside `rhetoricalForms`. Parse `data.semantic_frames` after anchors. Require a globally unique non-empty `frame_id` before owner resolution, an existing `anchor_id`, a non-empty string `underlying_claim`, and only non-empty strings in `source_image_terms`. Store valid references in `semanticFrames` and increment `anchorFrameCounts`. Then require exactly one frame for `metaphorical`/`mixed` anchors and zero frames for `literal` anchors.
 
 - [ ] **Step 5: Run tests and confirm GREEN**
 
@@ -113,7 +114,7 @@ git commit -m "feat: validate semantic frame ownership"
 
 **Interfaces:**
 - Consumes: Task 1 `semanticFrames` and existing `claims[]`.
-- Produces: `normalizeTokens(text): string[]`, `findLeakedTerm(text, terms): string | null`, and layer/frame-reference validation errors.
+- Produces: `rawTokens(text): string[]`, `stripKoreanParticle(token): string`, `findLeakedTerm(text, terms): string | null`, and layer/frame-reference validation errors.
 
 - [ ] **Step 1: Add failing valid and invalid claim cases**
 
@@ -173,10 +174,6 @@ function stripKoreanParticle(token) {
   const suffix = koreanParticleSuffixes.find((item) =>
     token.length > item.length && token.endsWith(item));
   return suffix ? token.slice(0, -suffix.length) : token;
-}
-
-function normalizeTokens(text) {
-  return rawTokens(text).map(stripKoreanParticle);
 }
 
 function findLeakedTerm(text, terms) {
@@ -274,10 +271,10 @@ const allowedQuestionModes = {
   complement: new Set(['integration', 'sequence']),
   conflict: new Set(['contrast', 'tradeoff', 'integration'])
 };
-const forcedChoiceMarkers = ['아니면', '중 무엇', '어느 쪽'];
+const forcedChoiceMarkers = ['아니면', '중 무엇'];
 ```
 
-For every connection, require a unique non-empty `connection_id`, non-empty `shared_dimension` and `moderator_question`, a known relationship, a compatible question mode, and at least two distinct known frames from different sources. Scan the moderator question against the union of referenced frame terms. For `sequence` and `complement`, reject each normalized forced-choice marker found in the question; do not apply this heuristic to `conflict`.
+For every connection, require a unique non-empty `connection_id`, non-empty `shared_dimension` and `moderator_question`, a known relationship, a compatible question mode, and at least two distinct known frames from different YouTube video IDs. Scan the moderator question against the union of referenced frame terms. For `sequence` and `complement`, reject explicit `아니면`/`중 무엇`, choice uses of `어느 쪽`, and paired `~인가요`; do not reject neutral `어느 쪽에도` wording and do not apply the heuristic to `conflict`. A moderator question duplicated in `claims` must provide `semantic_connection_id` and exactly match the connection question. Scan cross-domain bridge text against frames belonging to its support anchors.
 
 - [ ] **Step 4: Run focused and full tests**
 
@@ -413,7 +410,7 @@ Run:
 
 ```powershell
 $validator = 'C:\Users\lsg91\.codex\skills\.system\skill-creator\scripts\quick_validate.py'
-python $validator .
+python -X utf8 $validator .
 rg -n "semantic_frames|semantic_connections|rhetorical_form|validate_manifest" SKILL.md references
 ```
 
@@ -483,7 +480,7 @@ Run:
 node tests/validate-manifest.test.mjs
 node scripts/validate_manifest.mjs examples/manifest.json
 node --check scripts/validate_native_structure.mjs
-python 'C:\Users\lsg91\.codex\skills\.system\skill-creator\scripts\quick_validate.py' .
+python -X utf8 'C:\Users\lsg91\.codex\skills\.system\skill-creator\scripts\quick_validate.py' .
 git diff --check
 ```
 

@@ -85,6 +85,13 @@ Keep the source image and the discussion concept in separate fields:
       "text": "목표와 방향을 먼저 분명히 해야 합니다.",
       "support_anchor_ids": ["A01"],
       "semantic_frame_ids": ["F01"]
+    },
+    {
+      "claim_id": "M01",
+      "speaker": "moderator",
+      "label": "moderator_question",
+      "text": "목표를 먼저 분명히 한 뒤, 무엇을 하지 않을지 어떻게 정할까요?",
+      "semantic_connection_id": "SC01"
     }
   ],
   "semantic_connections": [
@@ -94,13 +101,13 @@ Keep the source image and the discussion concept in separate fields:
       "relationship": "sequence",
       "shared_dimension": "목표 설정과 집중",
       "question_mode": "sequence",
-      "moderator_question": "목표를 먼저 분명히 한 뒤, 불필요한 선택을 어떻게 줄일까요?"
+      "moderator_question": "목표를 먼저 분명히 한 뒤, 무엇을 하지 않을지 어떻게 정할까요?"
     }
   ]
 }
 ```
 
-`source_image_terms` contains image-specific words only. Do not include valid discussion concepts such as `목표`, `방향`, or `우선순위`. For a conjugated Korean image verb, store a stable surface fragment that catches continuations (`덜어` catches `덜어내다`) rather than only a dictionary form such as `덜다`. `visual_hint` is optional and is never evidence.
+`source_image_terms` contains only non-empty strings for image-specific words. Do not include valid discussion concepts such as `목표`, `방향`, or `우선순위`. For Korean image verbs, store stable surface fragments and irregular variants when needed: `덜어` catches `덜어내다`, while `걷고` and `걸어` cover forms that a dictionary-only `걷다` entry would miss. `underlying_claim` must be a non-empty string. `visual_hint` is optional and is never evidence.
 
 Claims backed by a metaphorical or mixed anchor must set `layer` and list the corresponding `semantic_frame_ids`:
 
@@ -109,7 +116,9 @@ Claims backed by a metaphorical or mixed anchor must set `layer` and list the co
 
 Literal-only claims may omit `layer`; the validator treats that simple case as dialogue. A frame reference must exist and its anchor must appear in the claim's `support_anchor_ids`.
 
-Every `semantic_connections` entry cites at least two distinct frames from different sources. Relationship and question mode must agree:
+When a moderator question also appears in `claims`, set `semantic_connection_id` and use exactly the same text as the referenced `moderator_question`. A second free-standing moderator question would bypass relationship validation and is rejected.
+
+Every `semantic_connections` entry cites at least two distinct frames from different YouTube videos. Relationship and question mode must agree:
 
 | Relationship | Allowed question modes |
 |---|---|
@@ -117,21 +126,21 @@ Every `semantic_connections` entry cites at least two distinct frames from diffe
 | `complement` | `integration`, `sequence` |
 | `conflict` | `contrast`, `tradeoff`, `integration` |
 
-The validator scans moderator questions for all referenced source-image terms. For `sequence` and `complement`, it also rejects forced-choice markers such as `아니면`, `중 무엇`, and `어느 쪽`; those forms are permitted only when the verified relationship is `conflict`.
+The validator scans moderator questions for all referenced source-image terms and scans cross-domain `bridges[].text` against frames attached to their support anchors. For `sequence` and `complement`, it rejects `아니면`, `중 무엇`, choice uses of `어느 쪽`, and paired `~인가요` questions. Neutral wording such as `어느 쪽에도 치우치지 않으려면` remains valid. Explicit alternatives are permitted when the verified relationship is `conflict`.
 
 `evidence_uses` is the render plan. It is optional for an evidence-map-only draft, but required before rendering a deck. Each evidence anchor normally appears in exactly one evidence slide, and each exact `video_id + start + end` clip is rendered once. If a deliberate reuse is unavoidable, set `reuse_allowed: true` and provide a short `reuse_reason`; otherwise `scripts/validate_manifest.mjs` rejects the manifest.
 
-`lens` is independent of `direction`. Use `same-domain` by default or `cross-domain` when comparing different fields. A cross-domain manifest requires a `bridges` array. Each bridge is authored by `AI moderator`, cites at least two anchors from different sources, records confidence, and includes a visible `difference`. Never store cross-domain synthesis as a participant claim. Read [cross-domain bridges](cross-domain-bridges.md) for the contract and example.
+`lens` is independent of `direction`. Use `same-domain` by default or `cross-domain` when comparing different fields. A cross-domain manifest requires a `bridges` array. Each bridge is authored by `AI moderator`, cites at least two anchors from different YouTube videos, records confidence, and includes a visible `difference`. Never store cross-domain synthesis as a participant claim. Read [cross-domain bridges](cross-domain-bridges.md) for the contract and example.
 
 ## Required checks
 
-- `sources.length >= 2`; each source has a valid YouTube video ID and stable URL.
+- `sources.length >= 2`; each source has a unique `source_id`, a unique YouTube `video_id`, and a stable matching URL. Renaming the same video does not create a second source.
 - Every anchor declares `rhetorical_form`; metaphorical and mixed anchors own exactly one valid semantic frame, while literal anchors own none.
 - Resolve and store `channel_name` plus `channel_url` whenever YouTube metadata is available; show those fields as the primary human-facing citation. Keep the direct video `url` alongside them. If metadata cannot be verified, use `제공된 원본 링크` and never invent a channel or title.
 - `start` and `end` are finite non-negative seconds with `end > start`.
 - The timestamp URL contains the same video ID and a `t` value equal to `start`.
 - Every participant claim has at least one support anchor. Moderator connective text may be unsupported only when it introduces no new factual premise.
-- Dialogue claims linked to semantic frames contain no `source_image_terms`; evidence claims may preserve verified source language.
+- Dialogue claims, moderator questions, and cross-domain bridge text contain no linked `source_image_terms`; evidence claims may preserve verified source language.
 - Every semantic connection uses compatible relationship and question modes, cites frames from at least two sources, and avoids unsupported forced-choice wording.
 - Every cross-domain bridge has evidence from at least two sources and remains separate from participant claims.
 - `direct_quote` requires an exact transcript span and manual/original-audio review. Automatic captions are evidence for locating a passage, not final quotation copy.

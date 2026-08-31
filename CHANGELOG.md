@@ -13,6 +13,7 @@ All notable changes to Grounded Roundtable are recorded here. The project follow
 - Manifest-backed `semantic_frames` that separate source imagery from underlying claims.
 - Relationship-aware `semantic_connections` for sequence, complement, and conflict questions.
 - Deterministic validation for metaphor leakage and unsupported forced-choice wording.
+- Moderator-question linkage, cross-domain bridge scanning, and unique-video source checks.
 
 ### Changed
 
