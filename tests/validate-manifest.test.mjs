@@ -311,6 +311,23 @@ try {
     /claim C01 leaks source-image term "덜어" from frame F01/
   );
 
+  const futureAdnominalTerm = metaphorBase();
+  futureAdnominalTerm.semantic_frames[0] = frame(
+    'F01',
+    'A01',
+    ['오를'],
+    '목표와 방향을 먼저 정해야 한다.'
+  );
+  expectValid(
+    'source-term-ending-is-not-stripped-as-particle',
+    withClaimChanges(futureAdnominalTerm, { text: '오, 목표부터 분명히 해야 합니다.' })
+  );
+  expectInvalid(
+    'source-term-ending-still-matches-raw-dialogue-token',
+    withClaimChanges(futureAdnominalTerm, { text: '오를 곳을 먼저 정해야 합니다.' }),
+    /claim C01 leaks source-image term "오를" from frame F01/
+  );
+
   expectValid('evidence-direct-quote-keeps-metaphor', evidenceQuoteManifest());
 
   expectValid('valid-sequence-connection', connectionManifest());
@@ -374,7 +391,7 @@ try {
     `public example should pass:\n${publicExample.stderr}`
   );
 
-  console.log('Manifest validator tests passed: 32 cases.');
+  console.log('Manifest validator tests passed: 34 cases.');
 } finally {
   fs.rmSync(tempDir, { recursive: true, force: true });
 }

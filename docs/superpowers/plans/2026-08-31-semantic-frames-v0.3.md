@@ -163,21 +163,29 @@ const koreanParticleSuffixes = [
   '만', '와', '과', '로'
 ].sort((a, b) => b.length - a.length);
 
-function normalizeTokens(text) {
+function rawTokens(text) {
   return String(text || '').normalize('NFKC').toLowerCase()
     .replace(/[^\p{L}\p{N}]+/gu, ' ')
-    .trim().split(/\s+/).filter(Boolean)
-    .map((token) => {
-      const suffix = koreanParticleSuffixes.find((item) =>
-        token.length > item.length && token.endsWith(item));
-      return suffix ? token.slice(0, -suffix.length) : token;
-    });
+    .trim().split(/\s+/).filter(Boolean);
+}
+
+function stripKoreanParticle(token) {
+  const suffix = koreanParticleSuffixes.find((item) =>
+    token.length > item.length && token.endsWith(item));
+  return suffix ? token.slice(0, -suffix.length) : token;
+}
+
+function normalizeTokens(text) {
+  return rawTokens(text).map(stripKoreanParticle);
 }
 
 function findLeakedTerm(text, terms) {
-  const tokens = normalizeTokens(text);
+  const tokens = rawTokens(text).flatMap((token) => {
+    const stripped = stripKoreanParticle(token);
+    return stripped === token ? [token] : [token, stripped];
+  });
   for (const rawTerm of terms) {
-    const term = normalizeTokens(rawTerm).join('');
+    const term = rawTokens(rawTerm).join('');
     if (!term) continue;
     const leaked = term.length === 1
       ? tokens.some((token) => token === term)

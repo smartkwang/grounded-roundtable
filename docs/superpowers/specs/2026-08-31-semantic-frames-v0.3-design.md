@@ -110,7 +110,7 @@ Every connection cites at least two frames from different sources. The moderator
 
 ## Deterministic text check
 
-The validator normalizes Unicode with NFKC, lowercases Latin text, replaces punctuation with spaces, and tokenizes on whitespace. Before comparison, it removes at most one longest matching Korean particle suffix from each dialogue token. The initial suffix set is `으로부터`, `에게서`, `에서부터`, `까지는`, `부터는`, `이라는`, `라고는`, `으로`, `에게`, `에서`, `부터`, `까지`, `처럼`, `보다`, `이라`, `라고`, `에는`, `으로는`, `은`, `는`, `이`, `가`, `을`, `를`, `에`, `의`, `도`, `만`, `와`, `과`, `로`. The implementation may extend this list only with a unit test demonstrating that the added suffix does not create a false positive.
+The validator normalizes Unicode with NFKC, lowercases Latin text, replaces punctuation with spaces, and tokenizes on whitespace. Each dialogue token is compared in both raw form and a form with at most one longest matching Korean particle suffix removed; stored source-image terms stay raw so a grammatical ending such as `오를` is not mistaken for a particle-bearing noun. The initial suffix set is `으로부터`, `에게서`, `에서부터`, `까지는`, `부터는`, `이라는`, `라고는`, `으로`, `에게`, `에서`, `부터`, `까지`, `처럼`, `보다`, `이라`, `라고`, `에는`, `으로는`, `은`, `는`, `이`, `가`, `을`, `를`, `에`, `의`, `도`, `만`, `와`, `과`, `로`. The implementation may extend this list only with a unit test demonstrating that the added suffix does not create a false positive.
 
 - One-character terms match normalized tokens exactly, which catches `산을` and `짐부터` without matching `생산` or `계산`.
 - Terms of two or more characters match a normalized token prefix, which catches `가지치기하듯` from `가지치기` and `덜어내야` from the stable surface fragment `덜어`.
