@@ -351,7 +351,17 @@ try {
     moderator_question: '어느 쪽의 위험을 먼저 감수해야 할까요?'
   }));
 
-  console.log('Manifest validator tests passed: 30 cases.');
+  const publicExample = spawnSync(process.execPath, [
+    validator,
+    fileURLToPath(new URL('../examples/manifest.json', import.meta.url))
+  ], { encoding: 'utf8' });
+  assert.equal(
+    publicExample.status,
+    0,
+    `public example should pass:\n${publicExample.stderr}`
+  );
+
+  console.log('Manifest validator tests passed: 31 cases.');
 } finally {
   fs.rmSync(tempDir, { recursive: true, force: true });
 }
