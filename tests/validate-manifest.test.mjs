@@ -84,6 +84,49 @@ function metaphorManifest(changes = {}) {
   };
 }
 
+function metaphorBase() {
+  const manifest = metaphorManifest();
+  manifest.claims = manifest.claims.map((claim) => (
+    claim.claim_id === 'C01'
+      ? {
+          ...claim,
+          text: '목표와 방향을 먼저 정해야 한다.',
+          layer: 'dialogue',
+          semantic_frame_ids: ['F01']
+        }
+      : claim
+  ));
+  return manifest;
+}
+
+function withClaimChanges(manifest, changes) {
+  const result = structuredClone(manifest);
+  result.claims = result.claims.map((claim) => (
+    claim.claim_id === 'C01' ? { ...claim, ...changes } : claim
+  ));
+  return result;
+}
+
+function gardeningManifest(text) {
+  const manifest = metaphorBase();
+  manifest.semantic_frames[0] = frame(
+    'F01',
+    'A01',
+    ['가지치기'],
+    '불필요한 선택지를 줄여 핵심에 집중해야 한다.'
+  );
+  return withClaimChanges(manifest, { text });
+}
+
+function evidenceQuoteManifest() {
+  return withClaimChanges(metaphorBase(), {
+    label: 'direct_quote',
+    text: '오를 산을 먼저 정해야 한다.',
+    layer: 'evidence',
+    transcript_span: 'Decide which mountain you want to climb first.'
+  });
+}
+
 function validate(name, manifest) {
   const file = path.join(tempDir, `${name}.json`);
   fs.writeFileSync(file, JSON.stringify(manifest), 'utf8');
@@ -158,7 +201,50 @@ try {
     semantic_frames: [frame('F01', 'A01', [], '목표를 먼저 정해야 한다.')]
   }), /source_image_terms must contain at least one non-empty term/);
 
-  console.log('Manifest validator tests passed: 12 cases.');
+  expectValid('valid-metaphor-dialogue-claim', metaphorBase());
+
+  expectInvalid('metaphor-claim-without-frame-reference', withClaimChanges(
+    metaphorBase(),
+    { semantic_frame_ids: undefined }
+  ), /claim C01 must reference semantic frame F01/);
+
+  expectInvalid('unknown-claim-frame-reference', withClaimChanges(
+    metaphorBase(),
+    { semantic_frame_ids: ['F99'] }
+  ), /references unknown semantic frame F99/);
+
+  const unrelatedFrameManifest = metaphorBase();
+  unrelatedFrameManifest.sources[1].anchors[0].rhetorical_form = 'metaphorical';
+  unrelatedFrameManifest.semantic_frames.push(frame(
+    'F02',
+    'A02',
+    ['짐'],
+    '불필요한 일을 줄여야 한다.'
+  ));
+  expectInvalid('unrelated-claim-frame-reference', withClaimChanges(
+    unrelatedFrameManifest,
+    { semantic_frame_ids: ['F02'] }
+  ), /semantic frame F02 is unrelated to its support anchors/);
+
+  expectInvalid('short-term-leak', withClaimChanges(
+    metaphorBase(),
+    { text: '산을 먼저 정해야 한다.' }
+  ), /claim C01 leaks source-image term "산" from frame F01/);
+
+  expectValid('short-term-no-substring-false-positive', withClaimChanges(
+    metaphorBase(),
+    { text: '생산 목표를 먼저 정해야 한다.' }
+  ));
+
+  expectInvalid(
+    'long-term-prefix-leak',
+    gardeningManifest('가지치기하듯 선택지를 줄여야 한다.'),
+    /claim C01 leaks source-image term "가지치기" from frame F01/
+  );
+
+  expectValid('evidence-direct-quote-keeps-metaphor', evidenceQuoteManifest());
+
+  console.log('Manifest validator tests passed: 19 cases.');
 } finally {
   fs.rmSync(tempDir, { recursive: true, force: true });
 }

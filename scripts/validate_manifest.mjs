@@ -29,6 +29,40 @@ const videoId = (url) => {
   const match = String(url || '').match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|shorts\/|embed\/))([A-Za-z0-9_-]{6,})/);
   return match?.[1] || null;
 };
+const koreanParticleSuffixes = [
+  '에서부터', '으로부터', '에게서', '으로는', '까지는', '부터는', '이라는',
+  '라고는', '으로', '에게', '에서', '부터', '까지', '처럼', '보다', '이라',
+  '라고', '에는', '은', '는', '이', '가', '을', '를', '에', '의', '도',
+  '만', '와', '과', '로'
+].sort((a, b) => b.length - a.length);
+
+function normalizeTokens(text) {
+  const normalized = String(text || '')
+    .normalize('NFKC')
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}]+/gu, ' ')
+    .trim();
+  if (!normalized) return [];
+  return normalized.split(/\s+/).filter(Boolean).map((token) => {
+    const suffix = koreanParticleSuffixes.find((item) => (
+      token.length > item.length && token.endsWith(item)
+    ));
+    return suffix ? token.slice(0, -suffix.length) : token;
+  });
+}
+
+function findLeakedTerm(text, terms) {
+  const tokens = normalizeTokens(text);
+  for (const rawTerm of terms) {
+    const term = normalizeTokens(rawTerm).join('');
+    if (!term) continue;
+    const leaked = term.length <= 2
+      ? tokens.some((token) => token === term)
+      : tokens.some((token) => token.startsWith(term));
+    if (leaked) return String(rawTerm).trim();
+  }
+  return null;
+}
 
 for (const [index, source] of sources.entries()) {
   const sourceLabel = `sources[${index}]`;
@@ -108,6 +142,7 @@ for (const [anchorId, anchored] of anchors) {
 
 for (const [index, claim] of (Array.isArray(data.claims) ? data.claims : []).entries()) {
   const label = `claims[${index}]`;
+  const claimName = claim.claim_id || label;
   if (!claim.speaker || !claim.text) errors.push(`${label} needs speaker and text`);
   if (claim.label === 'cross_domain_analogy') {
     errors.push(`${label} cross-domain synthesis belongs in bridges, not participant claims`);
@@ -116,6 +151,47 @@ for (const [index, claim] of (Array.isArray(data.claims) ? data.claims : []).ent
   if (claim.speaker !== 'moderator' && ids.length === 0) errors.push(`${label} needs support_anchor_ids`);
   for (const id of ids) if (!anchors.has(id)) errors.push(`${label} references unknown anchor ${id}`);
   if (claim.label === 'direct_quote' && !claim.transcript_span) errors.push(`${label} direct_quote needs transcript_span`);
+
+  if (claim.layer !== undefined && !['dialogue', 'evidence'].includes(claim.layer)) {
+    errors.push(`${label}.layer must be dialogue or evidence`);
+  }
+  const supportedMetaphorFrames = [];
+  for (const anchorId of ids) {
+    const anchored = anchors.get(anchorId);
+    if (!anchored || !['metaphorical', 'mixed'].includes(anchored.anchor.rhetorical_form)) continue;
+    for (const [frameId, framed] of semanticFrames) {
+      if (framed.frame.anchor_id === anchorId) supportedMetaphorFrames.push([frameId, framed]);
+    }
+  }
+  const referencedFrameIds = Array.isArray(claim.semantic_frame_ids) ? claim.semantic_frame_ids : [];
+  if (supportedMetaphorFrames.length > 0 && !['dialogue', 'evidence'].includes(claim.layer)) {
+    errors.push(`${label} supported by a metaphorical or mixed anchor needs layer dialogue or evidence`);
+  }
+  for (const [frameId] of supportedMetaphorFrames) {
+    if (!referencedFrameIds.includes(frameId)) {
+      errors.push(`claim ${claimName} must reference semantic frame ${frameId}`);
+    }
+  }
+  for (const frameId of referencedFrameIds) {
+    const framed = semanticFrames.get(frameId);
+    if (!framed) {
+      errors.push(`claim ${claimName} references unknown semantic frame ${frameId}`);
+      continue;
+    }
+    if (!ids.includes(framed.frame.anchor_id)) {
+      errors.push(`claim ${claimName} semantic frame ${frameId} is unrelated to its support anchors`);
+      continue;
+    }
+    if (claim.layer === 'dialogue') {
+      const leakedTerm = findLeakedTerm(claim.text, framed.frame.source_image_terms || []);
+      if (leakedTerm) {
+        errors.push(`claim ${claimName} leaks source-image term "${leakedTerm}" from frame ${frameId}`);
+      }
+    }
+  }
+  if (claim.label === 'direct_quote' && supportedMetaphorFrames.length > 0 && claim.layer !== 'evidence') {
+    errors.push(`claim ${claimName} direct_quote from a metaphorical or mixed anchor must use layer evidence`);
+  }
 }
 
 const bridges = Array.isArray(data.bridges) ? data.bridges : [];
