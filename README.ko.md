@@ -2,7 +2,7 @@
 
 **두 개 이상의 유튜브 인터뷰를, 모든 핵심 주장을 실제 영상에서 확인할 수 있는 근거 기반 가상 대담으로 만듭니다.**
 
-[English README](README.md) · [Google Slides 예시](https://docs.google.com/presentation/d/1zP8h6n0cUX9D8Ui6xQOocPRvUoshRaIpijkeYpF8jNY/edit?usp=sharing)
+[English README](README.md) · [변경 이력](CHANGELOG.md) · [Google Slides 예시](https://docs.google.com/presentation/d/1zP8h6n0cUX9D8Ui6xQOocPRvUoshRaIpijkeYpF8jNY/edit?usp=sharing)
 
 ![네이티브 YouTube 근거 슬라이드](docs/evidence-slide.png)
 

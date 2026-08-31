@@ -2,7 +2,7 @@
 
 **Create a source-grounded virtual roundtable from two or more YouTube interviews, with every important claim linked to playable evidence.**
 
-[한국어 README](README.ko.md) · [Google Slides example](https://docs.google.com/presentation/d/1zP8h6n0cUX9D8Ui6xQOocPRvUoshRaIpijkeYpF8jNY/edit?usp=sharing)
+[한국어 README](README.ko.md) · [Changelog](CHANGELOG.md) · [Google Slides example](https://docs.google.com/presentation/d/1zP8h6n0cUX9D8Ui6xQOocPRvUoshRaIpijkeYpF8jNY/edit?usp=sharing)
 
 ![Native YouTube evidence slide](docs/evidence-slide.png)
 
