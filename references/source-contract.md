@@ -107,7 +107,9 @@ Keep the source image and the discussion concept in separate fields:
 }
 ```
 
-`source_image_terms` contains only non-empty strings for image-specific words. Do not include valid discussion concepts such as `목표`, `방향`, or `우선순위`. For Korean image verbs, store stable surface fragments and irregular variants when needed: `덜어` catches `덜어내다`, while `걷고` and `걸어` cover forms that a dictionary-only `걷다` entry would miss. `underlying_claim` must be a non-empty string. `visual_hint` is optional and is never evidence.
+`source_image_terms` contains only non-empty strings for image-specific words. Include every image-bearing content word from the verified passage: concrete nouns and the usable surface fragments or irregular variants of image verbs and adjectives. Do not stop after a noun such as `짐`; the same frame also needs `덜어` so it catches `덜어내다`. Likewise, `걷고` and `걸어` cover forms that a dictionary-only `걷다` entry would miss. Do not include valid discussion concepts such as `목표`, `방향`, or `우선순위`. `underlying_claim` must be a non-empty string. `visual_hint` is optional and is never evidence.
+
+The manifest is required as a temporary validation artifact even when the requested output is dialogue only. Copy the exact final participant turns, moderator question, and bridge wording into it before running the validator; validating an earlier draft does not count.
 
 Claims backed by a metaphorical or mixed anchor must set `layer` and list the corresponding `semantic_frame_ids`:
 

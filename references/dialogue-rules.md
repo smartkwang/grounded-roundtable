@@ -17,7 +17,7 @@ The six-to-ten turns are a narrative rhythm, not a license to manufacture more c
 
 ## From source metaphor to discussion concept
 
-For each metaphorical or mixed anchor, create one `semantic_frames` entry with `source_image_terms` and `underlying_claim`. Render it in two distinct layers:
+For each metaphorical or mixed anchor, create one `semantic_frames` entry with `source_image_terms` and `underlying_claim`. Include both image nouns and every image-bearing verb/adjective surface family; for example, record both `짐` and `덜어`. Render it in two distinct layers:
 
 - `dialogue`: participant `faithful_paraphrase` or `multi_anchor_synthesis` text and moderator questions use concepts without the linked image terms;
 - `evidence`: verified wording and any `direct_quote` may retain the source image;

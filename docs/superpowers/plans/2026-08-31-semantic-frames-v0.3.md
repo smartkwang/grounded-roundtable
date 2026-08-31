@@ -385,11 +385,11 @@ The fixture must retain the exact Case A and Case B prompts and the rule that ev
 Replace prompt-only metaphor instructions with these required decisions:
 
 1. Classify every selected anchor with `rhetorical_form`.
-2. For metaphorical/mixed anchors, create one semantic frame from the verified transcript window.
+2. For metaphorical/mixed anchors, create one semantic frame from the verified transcript window and include every image noun plus image-bearing verb/adjective surface variant.
 3. Establish semantic connections before drafting moderator questions.
 4. Keep verified wording and source imagery on evidence/visual layers.
 5. Generate dialogue from `underlying_claim` and `shared_dimension`.
-6. Run `node scripts/validate_manifest.mjs <manifest>` before slide rendering.
+6. Copy the exact final wording into a temporary manifest and run `node scripts/validate_manifest.mjs <manifest>` before slide rendering or dialogue-only delivery.
 7. If validation reports leakage or forced-choice misuse, rewrite only the named turn once and revalidate; stop and report if still invalid.
 
 Route detailed fields to `references/source-contract.md`, Korean editorial examples to `references/korean-naturalness.md`, and turn construction to `references/dialogue-rules.md`. Do not duplicate the full schema in `SKILL.md`.

@@ -48,5 +48,5 @@ Reject and rewrite a turn if it:
 - turns sequential or complementary claims into an unsupported either/or choice;
 - reads like a subtitle translation when spoken aloud.
 
-Run `node scripts/validate_manifest.mjs <manifest.json>` after this editorial pass. If it identifies a claim or connection, rewrite only that turn once. Do not weaken the source-image list merely to make invalid dialogue pass.
+After this editorial pass, copy the exact final wording into the manifest and run `node scripts/validate_manifest.mjs <manifest.json>`, including for dialogue-only output. If it identifies a claim, connection, or bridge, rewrite only that turn once and update the manifest before revalidation. Do not weaken the source-image list merely to make invalid dialogue pass.
 
