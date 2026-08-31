@@ -24,6 +24,7 @@ const sources = Array.isArray(data.sources) ? data.sources : [];
 if (sources.length < 2) errors.push('sources must contain at least two entries');
 
 const anchors = new Map();
+const rhetoricalForms = new Set(['literal', 'metaphorical', 'mixed']);
 const videoId = (url) => {
   const match = String(url || '').match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|shorts\/|embed\/))([A-Za-z0-9_-]{6,})/);
   return match?.[1] || null;
@@ -39,6 +40,9 @@ for (const [index, source] of sources.entries()) {
   for (const [anchorIndex, anchor] of (source.anchors || []).entries()) {
     const label = `${sourceLabel}.anchors[${anchorIndex}]`;
     if (!anchor.anchor_id) errors.push(`${label}.anchor_id is required`);
+    if (!rhetoricalForms.has(anchor.rhetorical_form)) {
+      errors.push(`${label}.rhetorical_form must be literal, metaphorical, or mixed`);
+    }
     if (!Number.isFinite(anchor.start) || !Number.isFinite(anchor.end) || anchor.start < 0 || anchor.end <= anchor.start) {
       errors.push(`${label} must have finite start/end seconds with end > start`);
     }
@@ -51,6 +55,54 @@ for (const [index, source] of sources.entries()) {
       if (anchors.has(anchor.anchor_id)) errors.push(`${label}.anchor_id duplicates ${anchor.anchor_id}; anchor IDs must be globally unique`);
       else anchors.set(anchor.anchor_id, { source, anchor });
     }
+  }
+}
+
+const semanticFrames = new Map();
+const anchorFrameCounts = new Map();
+for (const [index, frame] of (Array.isArray(data.semantic_frames) ? data.semantic_frames : []).entries()) {
+  const label = `semantic_frames[${index}]`;
+  if (!frame || typeof frame !== 'object') {
+    errors.push(`${label} must be an object`);
+    continue;
+  }
+  if (!String(frame.frame_id || '').trim()) {
+    errors.push(`${label}.frame_id is required`);
+  } else if (semanticFrames.has(frame.frame_id)) {
+    errors.push(`${label}.frame_id duplicates ${frame.frame_id}`);
+  }
+
+  const anchored = anchors.get(frame.anchor_id);
+  if (!String(frame.anchor_id || '').trim()) {
+    errors.push(`${label}.anchor_id is required`);
+  } else if (!anchored) {
+    errors.push(`${label} references unknown anchor ${frame.anchor_id}`);
+  } else {
+    anchorFrameCounts.set(frame.anchor_id, (anchorFrameCounts.get(frame.anchor_id) || 0) + 1);
+  }
+
+  const imageTerms = Array.isArray(frame.source_image_terms)
+    ? frame.source_image_terms.filter((term) => typeof term === 'string' && term.trim())
+    : [];
+  if (imageTerms.length === 0) {
+    errors.push(`${label}.source_image_terms must contain at least one non-empty term`);
+  }
+  if (!String(frame.underlying_claim || '').trim()) {
+    errors.push(`${label}.underlying_claim is required`);
+  }
+
+  if (frame.frame_id && !semanticFrames.has(frame.frame_id) && anchored) {
+    semanticFrames.set(frame.frame_id, { frame, anchor: anchored.anchor, source: anchored.source });
+  }
+}
+
+for (const [anchorId, anchored] of anchors) {
+  const count = anchorFrameCounts.get(anchorId) || 0;
+  if (['metaphorical', 'mixed'].includes(anchored.anchor.rhetorical_form) && count !== 1) {
+    errors.push(`${anchored.anchor.rhetorical_form} anchor ${anchorId} must have exactly one semantic frame`);
+  }
+  if (anchored.anchor.rhetorical_form === 'literal' && count !== 0) {
+    errors.push(`literal anchor ${anchorId} must not have a semantic frame`);
   }
 }
 

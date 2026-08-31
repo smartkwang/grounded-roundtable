@@ -21,6 +21,7 @@ const base = {
       url: 'https://youtu.be/chef001',
       anchors: [{
         anchor_id: 'A01',
+        rhetorical_form: 'literal',
         start: 10,
         end: 30,
         timestamp_url: 'https://youtu.be/chef001?t=10'
@@ -33,6 +34,7 @@ const base = {
       url: 'https://youtu.be/code002',
       anchors: [{
         anchor_id: 'A02',
+        rhetorical_form: 'literal',
         start: 40,
         end: 60,
         timestamp_url: 'https://youtu.be/code002?t=40'
@@ -54,6 +56,33 @@ const base = {
     difference: '요리는 감각적 결과를, 소프트웨어는 유지보수성을 판단 기준으로 삼는다.'
   }]
 };
+
+function manifestWithAnchor(anchorId, changes) {
+  const manifest = structuredClone(base);
+  for (const source of manifest.sources) {
+    source.anchors = source.anchors.map((anchor) => (
+      anchor.anchor_id === anchorId ? { ...anchor, ...changes } : anchor
+    ));
+  }
+  return manifest;
+}
+
+function frame(frameId, anchorId, sourceImageTerms, underlyingClaim) {
+  return {
+    frame_id: frameId,
+    anchor_id: anchorId,
+    source_image_terms: sourceImageTerms,
+    underlying_claim: underlyingClaim
+  };
+}
+
+function metaphorManifest(changes = {}) {
+  return {
+    ...manifestWithAnchor('A01', { rhetorical_form: 'metaphorical' }),
+    semantic_frames: [frame('F01', 'A01', ['산'], '목표를 먼저 정해야 한다.')],
+    ...changes
+  };
+}
 
 function validate(name, manifest) {
   const file = path.join(tempDir, `${name}.json`);
@@ -100,7 +129,36 @@ try {
     claims: [{ ...base.claims[0], label: 'cross_domain_analogy' }]
   }, /cross-domain synthesis belongs in bridges/);
 
-  console.log('Manifest validator tests passed: 6 cases.');
+  expectInvalid('missing-rhetorical-form', manifestWithAnchor('A01', {
+    rhetorical_form: undefined
+  }), /rhetorical_form must be literal, metaphorical, or mixed/);
+
+  expectInvalid('metaphorical-anchor-without-frame', manifestWithAnchor('A01', {
+    rhetorical_form: 'metaphorical'
+  }), /metaphorical anchor A01 must have exactly one semantic frame/);
+
+  expectInvalid('literal-anchor-with-frame', {
+    ...base,
+    semantic_frames: [frame('F01', 'A01', ['산'], '목표를 먼저 정해야 한다.')]
+  }, /literal anchor A01 must not have a semantic frame/);
+
+  expectInvalid('duplicate-frame-id', metaphorManifest({
+    semantic_frames: [
+      frame('F01', 'A01', ['산'], '목표를 먼저 정해야 한다.'),
+      frame('F01', 'A02', ['짐'], '불필요한 일을 줄여야 한다.')
+    ]
+  }), /frame_id duplicates F01/);
+
+  expectInvalid('unknown-frame-anchor', {
+    ...base,
+    semantic_frames: [frame('F01', 'A99', ['산'], '목표를 먼저 정해야 한다.')]
+  }, /references unknown anchor A99/);
+
+  expectInvalid('empty-image-terms', metaphorManifest({
+    semantic_frames: [frame('F01', 'A01', [], '목표를 먼저 정해야 한다.')]
+  }), /source_image_terms must contain at least one non-empty term/);
+
+  console.log('Manifest validator tests passed: 12 cases.');
 } finally {
   fs.rmSync(tempDir, { recursive: true, force: true });
 }
