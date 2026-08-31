@@ -12,7 +12,7 @@
 - a persistent disclosure that the conversation is AI-constructed;
 - native YouTube players with exact start and end times in Google Slides;
 - channel attribution, timestamp links, and caption status beside each player;
-- validation for unsupported claims, repeated clips, and overlapping players;
+- validation for claims missing evidence anchors, repeated clips, and overlapping players;
 - optional cross-domain bridges kept separate from participant claims.
 
 ## Install
