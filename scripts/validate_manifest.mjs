@@ -35,6 +35,12 @@ const koreanParticleSuffixes = [
   '라고', '에는', '은', '는', '이', '가', '을', '를', '에', '의', '도',
   '만', '와', '과', '로'
 ].sort((a, b) => b.length - a.length);
+const allowedQuestionModes = {
+  sequence: new Set(['sequence', 'integration']),
+  complement: new Set(['integration', 'sequence']),
+  conflict: new Set(['contrast', 'tradeoff', 'integration'])
+};
+const forcedChoiceMarkers = ['아니면', '중 무엇', '어느 쪽'];
 
 function normalizeTokens(text) {
   const normalized = String(text || '')
@@ -191,6 +197,79 @@ for (const [index, claim] of (Array.isArray(data.claims) ? data.claims : []).ent
   }
   if (claim.label === 'direct_quote' && supportedMetaphorFrames.length > 0 && claim.layer !== 'evidence') {
     errors.push(`claim ${claimName} direct_quote from a metaphorical or mixed anchor must use layer evidence`);
+  }
+}
+
+const connectionIds = new Set();
+for (const [index, connection] of (Array.isArray(data.semantic_connections) ? data.semantic_connections : []).entries()) {
+  const label = `semantic_connections[${index}]`;
+  if (!connection || typeof connection !== 'object') {
+    errors.push(`${label} must be an object`);
+    continue;
+  }
+  const connectionName = connection.connection_id || label;
+  if (!String(connection.connection_id || '').trim()) {
+    errors.push(`${label}.connection_id is required`);
+  } else if (connectionIds.has(connection.connection_id)) {
+    errors.push(`${label}.connection_id duplicates ${connection.connection_id}`);
+  } else {
+    connectionIds.add(connection.connection_id);
+  }
+  if (!String(connection.shared_dimension || '').trim()) {
+    errors.push(`${label}.shared_dimension is required`);
+  }
+  if (!String(connection.moderator_question || '').trim()) {
+    errors.push(`${label}.moderator_question is required`);
+  }
+
+  const modes = allowedQuestionModes[connection.relationship];
+  if (!modes) {
+    errors.push(`${label}.relationship must be sequence, complement, or conflict`);
+  } else if (!modes.has(connection.question_mode)) {
+    errors.push(`${label}.question_mode ${connection.question_mode || '(missing)'} is not allowed for relationship ${connection.relationship}`);
+  }
+
+  const frameIds = Array.isArray(connection.semantic_frame_ids) ? connection.semantic_frame_ids : [];
+  const distinctFrameIds = new Set();
+  const sourceIds = new Set();
+  const resolvedFrames = [];
+  for (const frameId of frameIds) {
+    if (distinctFrameIds.has(frameId)) {
+      errors.push(`connection ${connectionName} repeats semantic frame ${frameId}`);
+      continue;
+    }
+    distinctFrameIds.add(frameId);
+    const framed = semanticFrames.get(frameId);
+    if (!framed) {
+      errors.push(`connection ${connectionName} references unknown semantic frame ${frameId}`);
+      continue;
+    }
+    resolvedFrames.push([frameId, framed]);
+    sourceIds.add(framed.source.source_id || framed.source.video_id);
+  }
+  if (distinctFrameIds.size < 2 || sourceIds.size < 2) {
+    errors.push(`connection ${connectionName} needs at least two semantic frames from different sources`);
+  }
+
+  for (const [frameId, framed] of resolvedFrames) {
+    const leakedTerm = findLeakedTerm(
+      connection.moderator_question,
+      framed.frame.source_image_terms || []
+    );
+    if (leakedTerm) {
+      errors.push(`connection ${connectionName} leaks source-image term "${leakedTerm}" from frame ${frameId}`);
+      break;
+    }
+  }
+
+  if (['sequence', 'complement'].includes(connection.relationship)) {
+    const normalizedQuestion = normalizeTokens(connection.moderator_question).join(' ');
+    for (const marker of forcedChoiceMarkers) {
+      const normalizedMarker = normalizeTokens(marker).join(' ');
+      if (normalizedQuestion.includes(normalizedMarker)) {
+        errors.push(`connection ${connectionName} uses forced-choice marker "${marker}" for non-conflict relationship ${connection.relationship}`);
+      }
+    }
   }
 }
 

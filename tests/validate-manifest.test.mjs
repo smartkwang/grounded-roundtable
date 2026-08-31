@@ -127,6 +127,62 @@ function evidenceQuoteManifest() {
   });
 }
 
+function connectionManifest(changes = {}) {
+  const manifest = metaphorBase();
+  manifest.sources[1].anchors[0].rhetorical_form = 'metaphorical';
+  manifest.semantic_frames.push(frame(
+    'F02',
+    'A02',
+    ['짐'],
+    '불필요한 선택을 줄여 핵심에 집중해야 한다.'
+  ));
+  manifest.claims = manifest.claims.map((claim) => (
+    claim.claim_id === 'C02'
+      ? {
+          ...claim,
+          text: '불필요한 선택을 줄여 핵심에 집중해야 한다.',
+          layer: 'dialogue',
+          semantic_frame_ids: ['F02']
+        }
+      : claim
+  ));
+  manifest.semantic_connections = [{
+    connection_id: 'SC01',
+    semantic_frame_ids: ['F01', 'F02'],
+    relationship: 'sequence',
+    shared_dimension: '목표 설정과 집중',
+    question_mode: 'sequence',
+    moderator_question: '목표를 먼저 정한 뒤 불필요한 선택을 어떻게 줄일까요?',
+    ...changes
+  }];
+  return manifest;
+}
+
+function duplicateConnectionManifest() {
+  const manifest = connectionManifest();
+  manifest.semantic_connections.push({ ...manifest.semantic_connections[0] });
+  return manifest;
+}
+
+function sameSourceConnectionManifest() {
+  const manifest = connectionManifest();
+  manifest.sources[0].anchors.push({
+    anchor_id: 'A03',
+    rhetorical_form: 'metaphorical',
+    start: 70,
+    end: 90,
+    timestamp_url: 'https://youtu.be/chef001?t=70'
+  });
+  manifest.semantic_frames.push(frame(
+    'F03',
+    'A03',
+    ['불꽃'],
+    '초기의 추진력을 확보해야 한다.'
+  ));
+  manifest.semantic_connections[0].semantic_frame_ids = ['F01', 'F03'];
+  return manifest;
+}
+
 function validate(name, manifest) {
   const file = path.join(tempDir, `${name}.json`);
   fs.writeFileSync(file, JSON.stringify(manifest), 'utf8');
@@ -244,7 +300,58 @@ try {
 
   expectValid('evidence-direct-quote-keeps-metaphor', evidenceQuoteManifest());
 
-  console.log('Manifest validator tests passed: 19 cases.');
+  expectValid('valid-sequence-connection', connectionManifest());
+
+  expectInvalid(
+    'duplicate-connection-id',
+    duplicateConnectionManifest(),
+    /connection_id duplicates SC01/
+  );
+
+  expectInvalid(
+    'connection-needs-different-sources',
+    sameSourceConnectionManifest(),
+    /needs at least two semantic frames from different sources/
+  );
+
+  expectInvalid('incompatible-question-mode', connectionManifest({
+    relationship: 'sequence',
+    question_mode: 'contrast'
+  }), /question_mode contrast is not allowed for relationship sequence/);
+
+  expectInvalid('moderator-metaphor-leak', connectionManifest({
+    moderator_question: '산을 먼저 정할까요, 짐을 먼저 줄일까요?'
+  }), /connection SC01 leaks source-image term "산" from frame F01/);
+
+  expectInvalid('unsupported-forced-choice', connectionManifest({
+    relationship: 'complement',
+    question_mode: 'integration',
+    moderator_question: '목표가 중요한가, 아니면 소거가 중요한가?'
+  }), /uses forced-choice marker "아니면" for non-conflict relationship complement/);
+
+  expectInvalid('empty-shared-dimension', connectionManifest({
+    shared_dimension: ' '
+  }), /shared_dimension is required/);
+
+  expectInvalid('empty-moderator-question', connectionManifest({
+    moderator_question: ' '
+  }), /moderator_question is required/);
+
+  expectInvalid('repeated-connection-frame', connectionManifest({
+    semantic_frame_ids: ['F01', 'F01']
+  }), /repeats semantic frame F01/);
+
+  expectInvalid('unknown-connection-frame', connectionManifest({
+    semantic_frame_ids: ['F01', 'F99']
+  }), /references unknown semantic frame F99/);
+
+  expectValid('valid-conflict-forced-choice', connectionManifest({
+    relationship: 'conflict',
+    question_mode: 'tradeoff',
+    moderator_question: '어느 쪽의 위험을 먼저 감수해야 할까요?'
+  }));
+
+  console.log('Manifest validator tests passed: 30 cases.');
 } finally {
   fs.rmSync(tempDir, { recursive: true, force: true });
 }
