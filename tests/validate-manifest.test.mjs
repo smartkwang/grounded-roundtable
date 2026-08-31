@@ -298,6 +298,19 @@ try {
     /claim C01 leaks source-image term "가지치기" from frame F01/
   );
 
+  const inflectedVerbLeak = metaphorBase();
+  inflectedVerbLeak.semantic_frames[0] = frame(
+    'F01',
+    'A01',
+    ['덜어'],
+    '불필요한 선택을 줄여 핵심에 집중해야 한다.'
+  );
+  expectInvalid(
+    'two-syllable-surface-prefix-leak',
+    withClaimChanges(inflectedVerbLeak, { text: '불필요한 선택을 덜어내야 한다.' }),
+    /claim C01 leaks source-image term "덜어" from frame F01/
+  );
+
   expectValid('evidence-direct-quote-keeps-metaphor', evidenceQuoteManifest());
 
   expectValid('valid-sequence-connection', connectionManifest());
@@ -361,7 +374,7 @@ try {
     `public example should pass:\n${publicExample.stderr}`
   );
 
-  console.log('Manifest validator tests passed: 31 cases.');
+  console.log('Manifest validator tests passed: 32 cases.');
 } finally {
   fs.rmSync(tempDir, { recursive: true, force: true });
 }

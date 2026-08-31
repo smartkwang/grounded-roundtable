@@ -112,8 +112,8 @@ Every connection cites at least two frames from different sources. The moderator
 
 The validator normalizes Unicode with NFKC, lowercases Latin text, replaces punctuation with spaces, and tokenizes on whitespace. Before comparison, it removes at most one longest matching Korean particle suffix from each dialogue token. The initial suffix set is `으로부터`, `에게서`, `에서부터`, `까지는`, `부터는`, `이라는`, `라고는`, `으로`, `에게`, `에서`, `부터`, `까지`, `처럼`, `보다`, `이라`, `라고`, `에는`, `으로는`, `은`, `는`, `이`, `가`, `을`, `를`, `에`, `의`, `도`, `만`, `와`, `과`, `로`. The implementation may extend this list only with a unit test demonstrating that the added suffix does not create a false positive.
 
-- Terms of one or two characters match normalized tokens exactly, which catches `산을` and `짐부터` without matching `생산` or `계산`.
-- Terms of three or more characters match a normalized token prefix, which catches forms such as `가지치기하듯` from the stored term `가지치기`.
+- One-character terms match normalized tokens exactly, which catches `산을` and `짐부터` without matching `생산` or `계산`.
+- Terms of two or more characters match a normalized token prefix, which catches `가지치기하듯` from `가지치기` and `덜어내야` from the stable surface fragment `덜어`.
 
 The validator reports the claim or connection ID, matched term, and frame ID. It does not rewrite text automatically. The workflow rewrites only the affected turn once, validates again, and stops with the remaining violations if the second attempt fails.
 

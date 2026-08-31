@@ -62,7 +62,7 @@ function findLeakedTerm(text, terms) {
   for (const rawTerm of terms) {
     const term = normalizeTokens(rawTerm).join('');
     if (!term) continue;
-    const leaked = term.length <= 2
+    const leaked = term.length === 1
       ? tokens.some((token) => token === term)
       : tokens.some((token) => token.startsWith(term));
     if (leaked) return String(rawTerm).trim();

@@ -72,7 +72,7 @@ Keep the source image and the discussion concept in separate fields:
     {
       "frame_id": "F02",
       "anchor_id": "A02",
-      "source_image_terms": ["짐", "덜다"],
+      "source_image_terms": ["짐", "덜어"],
       "underlying_claim": "불필요한 선택을 줄여 핵심에 집중해야 한다."
     }
   ],
@@ -100,7 +100,7 @@ Keep the source image and the discussion concept in separate fields:
 }
 ```
 
-`source_image_terms` contains image-specific words only. Do not include valid discussion concepts such as `목표`, `방향`, or `우선순위`. `visual_hint` is optional and is never evidence.
+`source_image_terms` contains image-specific words only. Do not include valid discussion concepts such as `목표`, `방향`, or `우선순위`. For a conjugated Korean image verb, store a stable surface fragment that catches continuations (`덜어` catches `덜어내다`) rather than only a dictionary form such as `덜다`. `visual_hint` is optional and is never evidence.
 
 Claims backed by a metaphorical or mixed anchor must set `layer` and list the corresponding `semantic_frame_ids`:
 
