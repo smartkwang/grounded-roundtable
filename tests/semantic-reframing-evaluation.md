@@ -40,5 +40,7 @@ Expected concepts: setting direction; concentrating effort by removing lower pri
 | v0.3.0 pre-final-validation candidate (`b7b455a`) | A | 5 | 4 | One participant still used `덜어내야`; short dialogue requests were not consistently validating the exact final wording. |
 | v0.3.0 final-manifest candidate (`885487e`) | A | 5 | 5 | All final turns stayed at goal, direction, prioritization, exclusion, or focus concepts. |
 | v0.3.0 final-manifest candidate (`885487e`) | B | 2 | 2 | All final turns stayed at direction and resource-prioritization concepts without navigation or gardening imagery. |
+| v0.3.0 reviewed candidate (`dfc6d97`) | A | 5 | 5 | Final moderator and participant turns contained no mountain/luggage imagery or unsupported forced choice. |
+| v0.3.0 reviewed candidate (`dfc6d97`) | B | 2 | 2 | Final turns contained no navigation/gardening imagery and preserved a sequence/integration relationship. |
 
 Every output was read manually. Each final pass count uses fresh contexts created after that exact runtime candidate was synchronized; earlier runs are not carried forward.
