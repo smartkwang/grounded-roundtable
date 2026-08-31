@@ -17,9 +17,15 @@ The six-to-ten turns are a narrative rhythm, not a license to manufacture more c
 
 ## From source metaphor to discussion concept
 
-For each metaphorical source passage, prepare three fields: `source image`, `underlying claim`, and `shared decision dimension`. A participant paraphrase states the underlying claim. The moderator connects sources through one decision dimension such as goals, priorities, constraints, or sequence. The original image belongs on the evidence slide, in a visual, or in a short explanation of that speaker's source; it does not supply the comparison language for the whole scene.
+For each metaphorical or mixed anchor, create one `semantic_frames` entry with `source_image_terms` and `underlying_claim`. Render it in two distinct layers:
 
-For example, map `오를 산을 정한다` to `목표와 방향을 먼저 정한다`, and map `짐을 덜어낸다` to `하지 않을 일을 정해 집중한다`. The connecting question then compares goal-setting with reducing competing choices, rather than asking whether climbing or unloading matters more.
+- `dialogue`: participant `faithful_paraphrase` or `multi_anchor_synthesis` text and moderator questions use concepts without the linked image terms;
+- `evidence`: verified wording and any `direct_quote` may retain the source image;
+- visual treatment may use `visual_hint`, but the visual never becomes evidence.
+
+If the user requests dialogue without an evidence page, return only the dialogue layer. Before writing a moderator question, add a `semantic_connections` entry: classify the relationship as `sequence`, `complement`, or `conflict`, name one `shared_dimension`, and choose a compatible question mode. The validator enforces the detailed contract in [source contract](source-contract.md).
+
+For example, map `오를 산을 정한다` to `목표와 방향을 먼저 정한다`, and map `짐을 덜어낸다` to `하지 않을 일을 정해 집중한다`. Those claims normally form a sequence or complement: `목표를 먼저 분명히 한 뒤, 무엇을 하지 않을지 어떻게 정할까요?` Use an either/or question only when verified anchors establish a real conflict.
 
 ## Cognitive bridges
 
