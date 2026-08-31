@@ -1,27 +1,19 @@
 # Grounded Roundtable
 
-**Turn 2+ YouTube interviews into a source-grounded virtual roundtable where every important claim can play back from its real timestamp.**
+**Create a source-grounded virtual roundtable from two or more YouTube interviews, with every important claim linked to playable evidence.**
 
-[한국어 README](README.ko.md) · [Live Google Slides example](https://docs.google.com/presentation/d/1zP8h6n0cUX9D8Ui6xQOocPRvUoshRaIpijkeYpF8jNY/edit?usp=sharing)
+[한국어 README](README.ko.md) · [Google Slides example](https://docs.google.com/presentation/d/1zP8h6n0cUX9D8Ui6xQOocPRvUoshRaIpijkeYpF8jNY/edit?usp=sharing)
 
-![A native YouTube evidence slide](docs/evidence-slide.png)
+![Native YouTube evidence slide](docs/evidence-slide.png)
 
-Humans are not good at watching several long interviews, remembering every argument, and comparing them across time. Grounded Roundtable is a skill for Codex, Claude Code, and compatible agents that turns those separate recordings into a thinking tool:
+## What it produces
 
-- a clearly disclosed **virtual** conversation, never a fake historical meeting;
-- natural Korean dialogue built from source-bounded paraphrases;
-- native YouTube players in Google Slides, with exact start/end ranges;
-- timestamp links, channel attribution, and caption status beside every player;
-- one evidence slide per exact clip, with duplicate-player and overlap checks;
-- a final takeaway written for the intended audience.
-
-## See the result first
-
-The sample deck connects interviews with Bill Gates, Yuval Noah Harari, and Elon Musk around one question: *When AI becomes more capable than its institutions, how do humans keep agency?*
-
-[Open the native Google Slides deck](https://docs.google.com/presentation/d/1zP8h6n0cUX9D8Ui6xQOocPRvUoshRaIpijkeYpF8jNY/edit?usp=sharing)
-
-![The audience takeaway slide](docs/takeaway-slide.png)
+- natural Korean dialogue that preserves each source's scope and uncertainty;
+- a persistent disclosure that the conversation is AI-constructed;
+- native YouTube players with exact start and end times in Google Slides;
+- channel attribution, timestamp links, and caption status beside each player;
+- validation for unsupported claims, repeated clips, and overlapping players;
+- optional cross-domain bridges kept separate from participant claims.
 
 ## Install
 
@@ -37,73 +29,47 @@ git clone https://github.com/smartkwang/grounded-roundtable.git ~/.codex/skills/
 git clone https://github.com/smartkwang/grounded-roundtable.git ~/.claude/skills/grounded-roundtable
 ```
 
-Restart or open a new agent session after installation. If your environment uses a different skills directory, clone this repository there without changing its internal structure.
+Start a new agent session after installation.
 
 ## Use
 
-Give the agent at least two YouTube URLs. You can also specify the discussion direction, intended audience, and takeaway.
-
 ```text
-Use grounded-roundtable with these three YouTube videos:
-- https://youtu.be/...
+Use grounded-roundtable with these YouTube videos:
 - https://youtu.be/...
 - https://youtu.be/...
 
+Lens: cross-domain
 Direction: tension-first
-Audience: teachers and organization leaders adopting AI
+Audience: organization leaders
 Create a native Google Slides deck in Korean.
 ```
 
-Available directions:
+`lens` controls what is compared:
 
-- `tension-first`
-- `common-ground-first`
-- `forecast-to-choice`
-- `solutions-first`
+- `same-domain` — compare positions within a shared field;
+- `cross-domain` — connect different fields through an AI-moderated hypothesis, followed by a meaningful practice difference.
 
-## How it stays grounded
+`direction` controls the conversation flow: `tension-first`, `common-ground-first`, `forecast-to-choice`, or `solutions-first`.
 
-The skill builds an evidence manifest before writing the conversation. Every participant claim points to one or more anchors containing the speaker, video ID, timestamp range, transcript span, and confidence status.
+## Evidence model
 
-The render plan adds a second invariant: an exact `video_id + start + end` clip normally appears on one evidence slide only. A later dialogue turn may continue the idea, but it must not create a duplicate player.
+Participant claims cite timestamped source anchors. Cross-domain connections are stored separately as AI-authored `bridges`; each bridge requires anchors from at least two sources and must state how the fields differ.
 
 ```bash
 node scripts/validate_manifest.mjs examples/manifest.json
 node scripts/validate_native_structure.mjs presentation.json --evidence-slides=p4,p5,p6
 ```
 
-## Cost-aware by design
+## Limitations
 
-The workflow retrieves each transcript once, caches it, builds a compact evidence map, and spends generation tokens only on selected scenes. When the budget is tight, it reduces topics, scenes, turns, and decoration before reducing source verification.
-
-## Important limitations
-
-- The conversation is AI-constructed. Participants did not hear or answer one another.
-- Automatic captions are useful for locating evidence, but direct quotations still require original-audio review.
-- Generated paraphrases must preserve the source's uncertainty, conditions, and scope.
-- Native YouTube playback depends on the video's availability and Google Slides permissions.
-- Do not use the output to falsely imply endorsement, agreement, or an actual meeting.
-
-## Repository structure
-
-```text
-SKILL.md
-references/
-  dialogue-rules.md
-  korean-naturalness.md
-  slides-structure.md
-  source-contract.md
-  cost-budget.md
-scripts/
-  validate_manifest.mjs
-  validate_native_structure.mjs
-examples/
-  manifest.json
-```
+- Participants did not hear or answer one another.
+- Automatic captions help locate evidence; direct quotations require original-audio review.
+- Native playback depends on video availability and Google Slides permissions.
+- An evidence anchor makes a claim reviewable; it does not prove that generated wording was spoken verbatim.
 
 ## Contributing
 
-Issues and pull requests are welcome, especially for new discussion directions, language-naturalness rules, evidence validators, and reusable slide themes. See [CONTRIBUTING.md](CONTRIBUTING.md).
+Issues and pull requests are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## License
 

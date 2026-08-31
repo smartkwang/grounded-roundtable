@@ -15,6 +15,10 @@ Use one strong question per scene. A good default is:
 
 The six-to-ten turns are a narrative rhythm, not a license to manufacture more claims. Keep one atomic claim per participant turn and let the moderator carry transitions.
 
+## Cognitive bridges
+
+When `lens` is `cross-domain`, the moderator connects the fields only after both source positions and anchors are established. Phrase the connection as an AI-generated hypothesis or question, then state the most important difference in goals, mechanisms, constraints, or success criteria. The bridge belongs in `bridges`, never in a participant `claim`. Read [cross-domain bridges](cross-domain-bridges.md) for the schema and slide unit.
+
 ## Labels and language
 
 - `direct_quote`: exact source language, quotation marks allowed only after anchor and audio review.

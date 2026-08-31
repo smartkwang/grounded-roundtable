@@ -16,6 +16,10 @@ try {
 }
 
 const errors = [];
+const lens = data.lens || 'same-domain';
+if (!['same-domain', 'cross-domain'].includes(lens)) {
+  errors.push('lens must be same-domain or cross-domain');
+}
 const sources = Array.isArray(data.sources) ? data.sources : [];
 if (sources.length < 2) errors.push('sources must contain at least two entries');
 
@@ -53,10 +57,51 @@ for (const [index, source] of sources.entries()) {
 for (const [index, claim] of (Array.isArray(data.claims) ? data.claims : []).entries()) {
   const label = `claims[${index}]`;
   if (!claim.speaker || !claim.text) errors.push(`${label} needs speaker and text`);
+  if (claim.label === 'cross_domain_analogy') {
+    errors.push(`${label} cross-domain synthesis belongs in bridges, not participant claims`);
+  }
   const ids = Array.isArray(claim.support_anchor_ids) ? claim.support_anchor_ids : [];
   if (claim.speaker !== 'moderator' && ids.length === 0) errors.push(`${label} needs support_anchor_ids`);
   for (const id of ids) if (!anchors.has(id)) errors.push(`${label} references unknown anchor ${id}`);
   if (claim.label === 'direct_quote' && !claim.transcript_span) errors.push(`${label} direct_quote needs transcript_span`);
+}
+
+const bridges = Array.isArray(data.bridges) ? data.bridges : [];
+if (lens === 'cross-domain' && bridges.length === 0) {
+  errors.push('cross-domain lens requires at least one bridge');
+}
+const bridgeIds = new Set();
+for (const [index, bridge] of bridges.entries()) {
+  const label = `bridges[${index}]`;
+  if (!bridge || typeof bridge !== 'object') {
+    errors.push(`${label} must be an object`);
+    continue;
+  }
+  if (!bridge.bridge_id) errors.push(`${label}.bridge_id is required`);
+  else if (bridgeIds.has(bridge.bridge_id)) errors.push(`${label}.bridge_id duplicates ${bridge.bridge_id}`);
+  else bridgeIds.add(bridge.bridge_id);
+  if (bridge.author !== 'AI moderator') errors.push(`${label}.author must be AI moderator`);
+  if (bridge.speaker) errors.push(`${label}.speaker is not allowed; cross-domain bridges cannot be attributed to a participant`);
+  if (!['cross_domain_hypothesis', 'cross_domain_boundary'].includes(bridge.label)) {
+    errors.push(`${label}.label must be cross_domain_hypothesis or cross_domain_boundary`);
+  }
+  if (!String(bridge.meta_theme || '').trim()) errors.push(`${label}.meta_theme is required`);
+  if (!String(bridge.text || '').trim()) errors.push(`${label}.text is required`);
+  if (!String(bridge.difference || '').trim()) errors.push(`${label}.difference is required`);
+  if (!['tentative', 'moderate', 'strong'].includes(bridge.confidence)) {
+    errors.push(`${label}.confidence must be tentative, moderate, or strong`);
+  }
+
+  const ids = Array.isArray(bridge.support_anchor_ids) ? bridge.support_anchor_ids : [];
+  const sourceIds = new Set();
+  for (const id of ids) {
+    const anchored = anchors.get(id);
+    if (!anchored) errors.push(`${label} references unknown anchor ${id}`);
+    else sourceIds.add(anchored.source.source_id || anchored.source.video_id);
+  }
+  if (ids.length < 2 || sourceIds.size < 2) {
+    errors.push(`${label} needs at least two anchors from different sources`);
+  }
 }
 
 // A manifest can optionally describe where each evidence anchor is rendered.
@@ -117,5 +162,5 @@ if (errors.length) {
   process.exit(1);
 }
 
-console.log(`Manifest valid: ${sources.length} sources, ${anchors.size} anchors, ${(data.claims || []).length} claims.`);
+console.log(`Manifest valid: ${sources.length} sources, ${anchors.size} anchors, ${(data.claims || []).length} claims, ${bridges.length} bridges.`);
 
