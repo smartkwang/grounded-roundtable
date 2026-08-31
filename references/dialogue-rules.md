@@ -15,6 +15,12 @@ Use one strong question per scene. A good default is:
 
 The six-to-ten turns are a narrative rhythm, not a license to manufacture more claims. Keep one atomic claim per participant turn and let the moderator carry transitions.
 
+## From source metaphor to discussion concept
+
+For each metaphorical source passage, prepare three fields: `source image`, `underlying claim`, and `shared decision dimension`. A participant paraphrase states the underlying claim. The moderator connects sources through one decision dimension such as goals, priorities, constraints, or sequence. The original image belongs on the evidence slide, in a visual, or in a short explanation of that speaker's source; it does not supply the comparison language for the whole scene.
+
+For example, map `오를 산을 정한다` to `목표와 방향을 먼저 정한다`, and map `짐을 덜어낸다` to `하지 않을 일을 정해 집중한다`. The connecting question then compares goal-setting with reducing competing choices, rather than asking whether climbing or unloading matters more.
+
 ## Cognitive bridges
 
 When `lens` is `cross-domain`, the moderator connects the fields only after both source positions and anchors are established. Phrase the connection as an AI-generated hypothesis or question, then state the most important difference in goals, mechanisms, constraints, or success criteria. The bridge belongs in `bridges`, never in a participant `claim`. Read [cross-domain bridges](cross-domain-bridges.md) for the schema and slide unit.

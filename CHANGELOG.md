@@ -5,6 +5,12 @@ All notable changes to Grounded Roundtable are recorded here. The project follow
 
 ## [Unreleased]
 
+## [0.2.1] - 2026-08-31
+
+### Fixed
+
+- Reframed source metaphors into concept-level Korean dialogue while preserving the original imagery for evidence slides and visuals, preventing mixed-metaphor moderator questions.
+
 ## [0.2.0] - 2026-08-31
 
 ### Added
@@ -29,6 +35,7 @@ All notable changes to Grounded Roundtable are recorded here. The project follow
 - Manifest and native-slide structure validators.
 - Natural Korean dialogue, disclosure, cost-budget, and evidence-model guidance.
 
-[Unreleased]: https://github.com/smartkwang/grounded-roundtable/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/smartkwang/grounded-roundtable/compare/v0.2.1...HEAD
+[0.2.1]: https://github.com/smartkwang/grounded-roundtable/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/smartkwang/grounded-roundtable/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/smartkwang/grounded-roundtable/releases/tag/v0.1.0
