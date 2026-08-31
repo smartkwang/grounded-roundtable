@@ -15,6 +15,7 @@
       "anchors": [
         {
           "anchor_id": "A01",
+          "rhetorical_form": "literal",
           "start": 1207,
           "end": 1229,
           "timestamp_url": "https://youtu.be/m_CoIITkLkU?t=1207",
@@ -35,6 +36,7 @@
       "anchors": [
         {
           "anchor_id": "A02",
+          "rhetorical_form": "literal",
           "start": 104,
           "end": 144,
           "timestamp_url": "https://youtu.be/LgyyECxOpik?t=104",
@@ -55,6 +57,7 @@
       "anchors": [
         {
           "anchor_id": "A03",
+          "rhetorical_form": "literal",
           "start": 312,
           "end": 330,
           "timestamp_url": "https://youtu.be/M0N-Hxgqi7I?t=312",

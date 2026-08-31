@@ -15,6 +15,18 @@ Use one strong question per scene. A good default is:
 
 The six-to-ten turns are a narrative rhythm, not a license to manufacture more claims. Keep one atomic claim per participant turn and let the moderator carry transitions.
 
+## From source metaphor to discussion concept
+
+For each metaphorical or mixed anchor, create one `semantic_frames` entry with `source_image_terms` and `underlying_claim`. Include both image nouns and every image-bearing verb/adjective surface family; for example, record both `짐` and `덜어`. Render it in two distinct layers:
+
+- `dialogue`: participant `faithful_paraphrase` or `multi_anchor_synthesis` text and moderator questions use concepts without the linked image terms;
+- `evidence`: verified wording and any `direct_quote` may retain the source image;
+- visual treatment may use `visual_hint`, but the visual never becomes evidence.
+
+If the user requests dialogue without an evidence page, return only the dialogue layer. Before writing a moderator question that connects semantic frames, add a `semantic_connections` entry: classify the relationship as `sequence`, `complement`, or `conflict`, name one `shared_dimension`, and choose a compatible question mode. If that question is duplicated in `claims`, link it with `semantic_connection_id` and use identical text. A question whose `support_anchor_ids` are exclusively literal does not need this link. Cross-domain bridge text is also moderator dialogue and is checked against the frames attached to its support anchors. The validator enforces the detailed contract in [source contract](source-contract.md).
+
+For example, map `오를 산을 정한다` to `목표와 방향을 먼저 정한다`, and map `짐을 덜어낸다` to `하지 않을 일을 정해 집중한다`. Those claims normally form a sequence or complement: `목표를 먼저 분명히 한 뒤, 무엇을 하지 않을지 어떻게 정할까요?` Use an either/or question only when verified anchors establish a real conflict.
+
 ## Cognitive bridges
 
 When `lens` is `cross-domain`, the moderator connects the fields only after both source positions and anchors are established. Phrase the connection as an AI-generated hypothesis or question, then state the most important difference in goals, mechanisms, constraints, or success criteria. The bridge belongs in `bridges`, never in a participant `claim`. Read [cross-domain bridges](cross-domain-bridges.md) for the schema and slide unit.

@@ -5,6 +5,21 @@ All notable changes to Grounded Roundtable are recorded here. The project follow
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-08-31
+
+### Added
+
+- Required `rhetorical_form` classification for every evidence anchor.
+- Manifest-backed `semantic_frames` that separate source imagery from underlying claims.
+- Relationship-aware `semantic_connections` for sequence, complement, and conflict questions.
+- Deterministic validation for metaphor leakage and unsupported forced-choice wording.
+- Moderator-question linkage, cross-domain bridge scanning, and unique-video source checks.
+
+### Changed
+
+- Metaphorical and mixed anchors now require exactly one semantic frame; existing ordinary anchors migrate by adding `"rhetorical_form": "literal"`.
+- Dialogue uses concept-level claims while verified source wording and imagery remain available to evidence and visual layers.
+
 ## [0.2.0] - 2026-08-31
 
 ### Added
@@ -29,6 +44,7 @@ All notable changes to Grounded Roundtable are recorded here. The project follow
 - Manifest and native-slide structure validators.
 - Natural Korean dialogue, disclosure, cost-budget, and evidence-model guidance.
 
-[Unreleased]: https://github.com/smartkwang/grounded-roundtable/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/smartkwang/grounded-roundtable/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/smartkwang/grounded-roundtable/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/smartkwang/grounded-roundtable/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/smartkwang/grounded-roundtable/releases/tag/v0.1.0

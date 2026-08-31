@@ -24,14 +24,92 @@ const sources = Array.isArray(data.sources) ? data.sources : [];
 if (sources.length < 2) errors.push('sources must contain at least two entries');
 
 const anchors = new Map();
+const rhetoricalForms = new Set(['literal', 'metaphorical', 'mixed']);
+const declaredSourceIds = new Set();
+const declaredVideoIds = new Set();
 const videoId = (url) => {
   const match = String(url || '').match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|shorts\/|embed\/))([A-Za-z0-9_-]{6,})/);
   return match?.[1] || null;
 };
+const koreanParticleSuffixes = [
+  '에서부터', '으로부터', '에게서', '으로는', '까지는', '부터는', '이라는',
+  '라고는', '으로', '에게', '에서', '부터', '까지', '처럼', '보다', '이라',
+  '라고', '에는', '은', '는', '이', '가', '을', '를', '에', '의', '도',
+  '만', '와', '과', '로'
+].sort((a, b) => b.length - a.length);
+const allowedQuestionModes = {
+  sequence: new Set(['sequence', 'integration']),
+  complement: new Set(['integration', 'sequence']),
+  conflict: new Set(['contrast', 'tradeoff', 'integration'])
+};
+
+function rawTokens(text) {
+  const normalized = String(text || '')
+    .normalize('NFKC')
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}]+/gu, ' ')
+    .trim();
+  if (!normalized) return [];
+  return normalized.split(/\s+/).filter(Boolean);
+}
+
+function stripKoreanParticle(token) {
+  const suffix = koreanParticleSuffixes.find((item) => (
+    token.length > item.length && token.endsWith(item)
+  ));
+  return suffix ? token.slice(0, -suffix.length) : token;
+}
+
+function findLeakedTerm(text, terms) {
+  const tokens = rawTokens(text).flatMap((token) => {
+    const stripped = stripKoreanParticle(token);
+    return stripped === token ? [token] : [token, stripped];
+  });
+  for (const rawTerm of terms) {
+    const term = rawTokens(rawTerm).join('');
+    if (!term) continue;
+    const leaked = term.length === 1
+      ? tokens.some((token) => token === term)
+      : tokens.some((token) => token.startsWith(term));
+    if (leaked) return String(rawTerm).trim();
+  }
+  return null;
+}
+
+function findForcedChoiceMarker(text) {
+  const tokens = rawTokens(text);
+  if (tokens.includes('아니면')) return '아니면';
+  for (let index = 0; index < tokens.length - 1; index += 1) {
+    if (['중', '중에', '중에서'].includes(tokens[index]) && tokens[index + 1].startsWith('무엇')) {
+      return '중 무엇';
+    }
+    if (tokens[index] === '어느' && [
+      '쪽이', '쪽을', '쪽부터', '쪽인가', '쪽인가요', '쪽일까', '쪽일까요'
+    ].includes(tokens[index + 1])) {
+      return '어느 쪽';
+    }
+  }
+  if (tokens.filter((token) => token.endsWith('인가요')).length >= 2) {
+    return 'paired ~인가요';
+  }
+  return null;
+}
 
 for (const [index, source] of sources.entries()) {
   const sourceLabel = `sources[${index}]`;
+  if (typeof source.source_id !== 'string' || !source.source_id.trim()) {
+    errors.push(`${sourceLabel}.source_id is required`);
+  } else if (declaredSourceIds.has(source.source_id)) {
+    errors.push(`${sourceLabel}.source_id duplicates ${source.source_id}`);
+  } else {
+    declaredSourceIds.add(source.source_id);
+  }
   if (!source.video_id) errors.push(`${sourceLabel}.video_id is required`);
+  else if (declaredVideoIds.has(source.video_id)) {
+    errors.push(`${sourceLabel}.video_id duplicates ${source.video_id}; each source must be a different YouTube video`);
+  } else {
+    declaredVideoIds.add(source.video_id);
+  }
   if (!source.speaker) errors.push(`${sourceLabel}.speaker is required`);
   if (!videoId(source.url) || videoId(source.url) !== source.video_id) {
     errors.push(`${sourceLabel}.url does not contain the declared video_id`);
@@ -39,6 +117,9 @@ for (const [index, source] of sources.entries()) {
   for (const [anchorIndex, anchor] of (source.anchors || []).entries()) {
     const label = `${sourceLabel}.anchors[${anchorIndex}]`;
     if (!anchor.anchor_id) errors.push(`${label}.anchor_id is required`);
+    if (!rhetoricalForms.has(anchor.rhetorical_form)) {
+      errors.push(`${label}.rhetorical_form must be literal, metaphorical, or mixed`);
+    }
     if (!Number.isFinite(anchor.start) || !Number.isFinite(anchor.end) || anchor.start < 0 || anchor.end <= anchor.start) {
       errors.push(`${label} must have finite start/end seconds with end > start`);
     }
@@ -54,8 +135,77 @@ for (const [index, source] of sources.entries()) {
   }
 }
 
-for (const [index, claim] of (Array.isArray(data.claims) ? data.claims : []).entries()) {
+const semanticFrames = new Map();
+const semanticFrameIds = new Set();
+const anchorFrameCounts = new Map();
+for (const [index, frame] of (Array.isArray(data.semantic_frames) ? data.semantic_frames : []).entries()) {
+  const label = `semantic_frames[${index}]`;
+  if (!frame || typeof frame !== 'object') {
+    errors.push(`${label} must be an object`);
+    continue;
+  }
+  const hasFrameId = typeof frame.frame_id === 'string' && Boolean(frame.frame_id.trim());
+  const duplicateFrameId = hasFrameId && semanticFrameIds.has(frame.frame_id);
+  if (frame.frame_id === undefined || frame.frame_id === null || frame.frame_id === '') {
+    errors.push(`${label}.frame_id is required`);
+  } else if (!hasFrameId) {
+    errors.push(`${label}.frame_id must be a non-empty string`);
+  } else if (duplicateFrameId) {
+    errors.push(`${label}.frame_id duplicates ${frame.frame_id}`);
+  } else {
+    semanticFrameIds.add(frame.frame_id);
+  }
+
+  const anchored = anchors.get(frame.anchor_id);
+  if (typeof frame.anchor_id !== 'string' || !frame.anchor_id.trim()) {
+    errors.push(`${label}.anchor_id is required`);
+  } else if (!anchored) {
+    errors.push(`${label} references unknown anchor ${frame.anchor_id}`);
+  } else {
+    anchorFrameCounts.set(frame.anchor_id, (anchorFrameCounts.get(frame.anchor_id) || 0) + 1);
+  }
+
+  const hasImageTermArray = Array.isArray(frame.source_image_terms) && frame.source_image_terms.length > 0;
+  const imageTermsAreValid = hasImageTermArray && frame.source_image_terms.every((term) => (
+    typeof term === 'string' && term.trim()
+  ));
+  if (!hasImageTermArray) {
+    errors.push(`${label}.source_image_terms must contain at least one non-empty term`);
+  } else if (!imageTermsAreValid) {
+    errors.push(`${label}.source_image_terms must contain only non-empty strings`);
+  }
+  if (typeof frame.underlying_claim !== 'string' || !frame.underlying_claim.trim()) {
+    errors.push(`${label}.underlying_claim must be a non-empty string`);
+  }
+  if (frame.visual_hint !== undefined && typeof frame.visual_hint !== 'string') {
+    errors.push(`${label}.visual_hint must be a string when provided`);
+  }
+
+  if (hasFrameId && !duplicateFrameId && anchored) {
+    const validatedFrame = {
+      ...frame,
+      source_image_terms: imageTermsAreValid
+        ? frame.source_image_terms.map((term) => term.trim())
+        : []
+    };
+    semanticFrames.set(frame.frame_id, { frame: validatedFrame, anchor: anchored.anchor, source: anchored.source });
+  }
+}
+
+for (const [anchorId, anchored] of anchors) {
+  const count = anchorFrameCounts.get(anchorId) || 0;
+  if (['metaphorical', 'mixed'].includes(anchored.anchor.rhetorical_form) && count !== 1) {
+    errors.push(`${anchored.anchor.rhetorical_form} anchor ${anchorId} must have exactly one semantic frame`);
+  }
+  if (anchored.anchor.rhetorical_form === 'literal' && count !== 0) {
+    errors.push(`literal anchor ${anchorId} must not have a semantic frame`);
+  }
+}
+
+const claims = Array.isArray(data.claims) ? data.claims : [];
+for (const [index, claim] of claims.entries()) {
   const label = `claims[${index}]`;
+  const claimName = claim.claim_id || label;
   if (!claim.speaker || !claim.text) errors.push(`${label} needs speaker and text`);
   if (claim.label === 'cross_domain_analogy') {
     errors.push(`${label} cross-domain synthesis belongs in bridges, not participant claims`);
@@ -64,6 +214,166 @@ for (const [index, claim] of (Array.isArray(data.claims) ? data.claims : []).ent
   if (claim.speaker !== 'moderator' && ids.length === 0) errors.push(`${label} needs support_anchor_ids`);
   for (const id of ids) if (!anchors.has(id)) errors.push(`${label} references unknown anchor ${id}`);
   if (claim.label === 'direct_quote' && !claim.transcript_span) errors.push(`${label} direct_quote needs transcript_span`);
+
+  if (claim.layer !== undefined && !['dialogue', 'evidence'].includes(claim.layer)) {
+    errors.push(`${label}.layer must be dialogue or evidence`);
+  }
+  const supportedMetaphorFrames = [];
+  for (const anchorId of ids) {
+    const anchored = anchors.get(anchorId);
+    if (!anchored || !['metaphorical', 'mixed'].includes(anchored.anchor.rhetorical_form)) continue;
+    for (const [frameId, framed] of semanticFrames) {
+      if (framed.frame.anchor_id === anchorId) supportedMetaphorFrames.push([frameId, framed]);
+    }
+  }
+  const referencedFrameIds = Array.isArray(claim.semantic_frame_ids) ? claim.semantic_frame_ids : [];
+  if (supportedMetaphorFrames.length > 0 && !['dialogue', 'evidence'].includes(claim.layer)) {
+    errors.push(`${label} supported by a metaphorical or mixed anchor needs layer dialogue or evidence`);
+  }
+  for (const [frameId] of supportedMetaphorFrames) {
+    if (!referencedFrameIds.includes(frameId)) {
+      errors.push(`claim ${claimName} must reference semantic frame ${frameId}`);
+    }
+  }
+  for (const frameId of referencedFrameIds) {
+    const framed = semanticFrames.get(frameId);
+    if (!framed) {
+      errors.push(`claim ${claimName} references unknown semantic frame ${frameId}`);
+      continue;
+    }
+    if (!ids.includes(framed.frame.anchor_id)) {
+      errors.push(`claim ${claimName} semantic frame ${frameId} is unrelated to its support anchors`);
+      continue;
+    }
+    if (claim.layer === 'dialogue') {
+      const leakedTerm = findLeakedTerm(claim.text, framed.frame.source_image_terms || []);
+      if (leakedTerm) {
+        errors.push(`claim ${claimName} leaks source-image term "${leakedTerm}" from frame ${frameId}`);
+      }
+    }
+  }
+  if (claim.label === 'direct_quote' && supportedMetaphorFrames.length > 0 && claim.layer !== 'evidence') {
+    errors.push(`claim ${claimName} direct_quote from a metaphorical or mixed anchor must use layer evidence`);
+  }
+}
+
+const connectionIds = new Set();
+const semanticConnections = new Map();
+for (const [index, connection] of (Array.isArray(data.semantic_connections) ? data.semantic_connections : []).entries()) {
+  const label = `semantic_connections[${index}]`;
+  if (!connection || typeof connection !== 'object') {
+    errors.push(`${label} must be an object`);
+    continue;
+  }
+  const connectionName = connection.connection_id || label;
+  if (!String(connection.connection_id || '').trim()) {
+    errors.push(`${label}.connection_id is required`);
+  } else if (connectionIds.has(connection.connection_id)) {
+    errors.push(`${label}.connection_id duplicates ${connection.connection_id}`);
+  } else {
+    connectionIds.add(connection.connection_id);
+    semanticConnections.set(connection.connection_id, connection);
+  }
+  if (!String(connection.shared_dimension || '').trim()) {
+    errors.push(`${label}.shared_dimension is required`);
+  }
+  if (!String(connection.moderator_question || '').trim()) {
+    errors.push(`${label}.moderator_question is required`);
+  }
+
+  const modes = allowedQuestionModes[connection.relationship];
+  if (!modes) {
+    errors.push(`${label}.relationship must be sequence, complement, or conflict`);
+  } else if (!modes.has(connection.question_mode)) {
+    errors.push(`${label}.question_mode ${connection.question_mode || '(missing)'} is not allowed for relationship ${connection.relationship}`);
+  }
+
+  const frameIds = Array.isArray(connection.semantic_frame_ids) ? connection.semantic_frame_ids : [];
+  const distinctFrameIds = new Set();
+  const connectedVideoIds = new Set();
+  const resolvedFrames = [];
+  for (const frameId of frameIds) {
+    if (distinctFrameIds.has(frameId)) {
+      errors.push(`connection ${connectionName} repeats semantic frame ${frameId}`);
+      continue;
+    }
+    distinctFrameIds.add(frameId);
+    const framed = semanticFrames.get(frameId);
+    if (!framed) {
+      errors.push(`connection ${connectionName} references unknown semantic frame ${frameId}`);
+      continue;
+    }
+    resolvedFrames.push([frameId, framed]);
+    connectedVideoIds.add(framed.source.video_id);
+  }
+  if (distinctFrameIds.size < 2 || connectedVideoIds.size < 2) {
+    errors.push(`connection ${connectionName} needs at least two semantic frames from different sources`);
+  }
+
+  for (const [frameId, framed] of resolvedFrames) {
+    const leakedTerm = findLeakedTerm(
+      connection.moderator_question,
+      framed.frame.source_image_terms || []
+    );
+    if (leakedTerm) {
+      errors.push(`connection ${connectionName} leaks source-image term "${leakedTerm}" from frame ${frameId}`);
+      break;
+    }
+  }
+
+  if (['sequence', 'complement'].includes(connection.relationship)) {
+    const marker = findForcedChoiceMarker(connection.moderator_question);
+    if (marker) {
+      errors.push(`connection ${connectionName} uses forced-choice marker "${marker}" for non-conflict relationship ${connection.relationship}`);
+    }
+  }
+}
+
+for (const [index, claim] of claims.entries()) {
+  if (claim?.speaker !== 'moderator') continue;
+  const claimName = claim.claim_id || `claims[${index}]`;
+  const supportAnchorIds = Array.isArray(claim.support_anchor_ids) ? claim.support_anchor_ids : [];
+  const supportedFrames = [...semanticFrames].filter(([, framed]) => (
+    supportAnchorIds.includes(framed.frame.anchor_id)
+  ));
+  const connection = claim.semantic_connection_id
+    ? semanticConnections.get(claim.semantic_connection_id)
+    : null;
+  const connectedFrameIds = new Set(
+    Array.isArray(connection?.semantic_frame_ids) ? connection.semantic_frame_ids : []
+  );
+  const framesToScan = supportAnchorIds.length > 0
+    ? supportedFrames
+    : connection
+      ? [...semanticFrames].filter(([frameId]) => connectedFrameIds.has(frameId))
+      : [...semanticFrames];
+  for (const [frameId, framed] of framesToScan) {
+    const leakedTerm = findLeakedTerm(claim.text, framed.frame.source_image_terms || []);
+    if (leakedTerm) {
+      errors.push(`moderator claim ${claimName} leaks source-image term "${leakedTerm}" from frame ${frameId}`);
+      break;
+    }
+  }
+  const claimText = String(claim.text || '').trim();
+  const isQuestion = claim.label === 'moderator_question'
+    || /[?？]\s*$/.test(claimText)
+    || /(?:까요|나요|인가요)\s*$/.test(claimText);
+  const needsConnection = isQuestion && (
+    supportedFrames.length >= 2
+    || (supportAnchorIds.length === 0 && semanticFrames.size >= 2)
+  );
+  if (needsConnection && !claim.semantic_connection_id) {
+    errors.push(`moderator claim ${claimName} requires semantic_connection_id`);
+    continue;
+  }
+  if (!claim.semantic_connection_id) continue;
+  if (!connection) {
+    errors.push(`moderator claim ${claimName} references unknown semantic connection ${claim.semantic_connection_id}`);
+    continue;
+  }
+  if (String(claim.text || '').trim() !== String(connection.moderator_question || '').trim()) {
+    errors.push(`moderator claim ${claimName} text must match connection ${claim.semantic_connection_id} moderator_question`);
+  }
 }
 
 const bridges = Array.isArray(data.bridges) ? data.bridges : [];
@@ -93,14 +403,22 @@ for (const [index, bridge] of bridges.entries()) {
   }
 
   const ids = Array.isArray(bridge.support_anchor_ids) ? bridge.support_anchor_ids : [];
-  const sourceIds = new Set();
+  const bridgeVideoIds = new Set();
   for (const id of ids) {
     const anchored = anchors.get(id);
     if (!anchored) errors.push(`${label} references unknown anchor ${id}`);
-    else sourceIds.add(anchored.source.source_id || anchored.source.video_id);
+    else bridgeVideoIds.add(anchored.source.video_id);
   }
-  if (ids.length < 2 || sourceIds.size < 2) {
+  if (ids.length < 2 || bridgeVideoIds.size < 2) {
     errors.push(`${label} needs at least two anchors from different sources`);
+  }
+  for (const [frameId, framed] of semanticFrames) {
+    if (!ids.includes(framed.frame.anchor_id)) continue;
+    const leakedTerm = findLeakedTerm(bridge.text, framed.frame.source_image_terms || []);
+    if (leakedTerm) {
+      errors.push(`bridge ${bridge.bridge_id || label} leaks source-image term "${leakedTerm}" from frame ${frameId}`);
+      break;
+    }
   }
 }
 
