@@ -13,6 +13,10 @@ The deck is a scene-centered thinking canvas, not a tutorial about the tool. Vis
 
 The direction is a generation input, not an excuse for a full instruction slide. Add a separate direction picker only when the user explicitly asks the audience to choose inside the deck.
 
+### Cross-domain bridge unit
+
+When `lens` is `cross-domain`, preserve the evidence rhythm: field A claim → field A player → field B claim → field B player → AI moderator bridge → practice difference → audience question. Show the bridge as an AI hypothesis, not participant speech. Put the shared principle and the consequential difference in separate visual regions so the deck does not collapse distinct fields into a generic lesson. Do not repeat either evidence player after the bridge.
+
 For shorter inputs, merge scene pages but do not revert to a clip after every sentence. Evidence pages should contain two to four high-value anchors, the speaker, timestamp range, one-line claim, and a direct link. When the output is native Google Slides, put a YouTube video element on the same evidence card using the original Video ID, set its `videoProperties.start`/`end` to the anchor range, and keep the exact timestamp link beside it as an external/open-in-YouTube fallback. A thumbnail is a navigation aid; it is not evidence by itself.
 
 ### Evidence-focus mode

@@ -5,6 +5,7 @@ Use a small, inspectable manifest as the boundary between retrieval and generati
 ```json
 {
   "topic": "AI safety and public accountability",
+  "lens": "same-domain",
   "direction": "tension-first",
   "audience": "people deciding whether and how to adopt AI",
   "takeaway": "Make the trade-off explicit before choosing an action.",
@@ -53,6 +54,8 @@ Use a small, inspectable manifest as the boundary between retrieval and generati
 
 `evidence_uses` is the render plan. It is optional for an evidence-map-only draft, but required before rendering a deck. Each evidence anchor normally appears in exactly one evidence slide, and each exact `video_id + start + end` clip is rendered once. If a deliberate reuse is unavoidable, set `reuse_allowed: true` and provide a short `reuse_reason`; otherwise `scripts/validate_manifest.mjs` rejects the manifest.
 
+`lens` is independent of `direction`. Use `same-domain` by default or `cross-domain` when comparing different fields. A cross-domain manifest requires a `bridges` array. Each bridge is authored by `AI moderator`, cites at least two anchors from different sources, records confidence, and includes a visible `difference`. Never store cross-domain synthesis as a participant claim. Read [cross-domain bridges](cross-domain-bridges.md) for the contract and example.
+
 ## Required checks
 
 - `sources.length >= 2`; each source has a valid YouTube video ID and stable URL.
@@ -60,6 +63,7 @@ Use a small, inspectable manifest as the boundary between retrieval and generati
 - `start` and `end` are finite non-negative seconds with `end > start`.
 - The timestamp URL contains the same video ID and a `t` value equal to `start`.
 - Every participant claim has at least one support anchor. Moderator connective text may be unsupported only when it introduces no new factual premise.
+- Every cross-domain bridge has evidence from at least two sources and remains separate from participant claims.
 - `direct_quote` requires an exact transcript span and manual/original-audio review. Automatic captions are evidence for locating a passage, not final quotation copy.
 - `faithful_paraphrase` has no quotation marks. `multi_anchor_synthesis` names all supporting anchor IDs.
 - Record whether captions were auto-generated, human-created, or unavailable, and disclose that status in the deck.
